@@ -103,6 +103,8 @@ hellodoctor/
 * `value_amount?`, `notes?`
 * `created_at`, `updated_at`
 
+> **Importante (horário):** por decisão do MVP, não há fuso/horário de verão.
+> Salvamos **exatamente** o que é digitado: `10:00` entra → `10:00` é armazenado/exibido.
 
 ---
 
@@ -214,3 +216,4 @@ npm run dev     # com --watch
 * Flavia Silva
 * Pamella Lopes
 * Renan Ewbank
+* Renan Ewbakn
