@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>HelloDoctor — Convênios</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">H</div>
+      HelloDoctor
+    </div>
+    <nav class="topnav">
+      <a href="/agenda-day.html">Agenda</a>
+      <a href="/patients.html">Prontuários</a>
+      <a href="/insurances.html" class="active">Convênios</a>
+      <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
+    </nav>
+    <div class="topbar__right">
+      <span class="badge" id="todayBadge"></span>
+      <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>Convênios</h1>
+
+    <div class="card">
+      <div class="header-actions">
+        <div class="primary-actions">
+          <button id="openModalBtn" class="btn-primary">
+            + Cadastrar Novo Convênio
+          </button>
+        </div>
+      </div>
+
+      <table class="table mt-12" id="listTable">
+        <thead>
+            <tr>
+                <th style="width:72px">#</th>
+                <th>Convênio</th>
+                <th style="width:160px">Código ANS</th>
+                <th style="width:180px">Data de pagamento</th>
+                <th style="width:180px">Telefone</th>
+                <th style="width:240px">E-mail</th>
+                <th style="width:80px; text-align:right;">Ações</th>
+            </tr>
+        </thead>
+
+        <tbody id="tbody">
+          <tr><td colspan="5" style="color:var(--muted)"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: Novo Convênio ===== -->
+  <div class="modal" id="insModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal__header">
+        <h2 id="modalTitle">Novo Convênio</h2>
+        <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
+      </div>
+
+      <form id="createForm" class="modal__body" autocomplete="off">
+        <div class="form-grid">
+            <!-- NOME (full width) -->
+            <div class="form-row col-span-2">
+                <label>Nome</label>
+                <input name="name" placeholder="Ex.: Particular" required />
+            </div>
+
+            <!-- CÓDIGO ANS + DATA DE PAGAMENTO -->
+            <div class="form-row">
+                <label>Código ANS</label>
+                <input name="ans_code" placeholder="Ex.: 123456" />
+            </div>
+            <div class="form-row">
+                <label>Data de Pagamento</label>
+                <input name="pay_day" type="date" />
+            </div>
+
+            <!-- TELEFONE + E-MAIL -->
+            <div class="form-row">
+                <label>Telefone</label>
+                <input name="phone" placeholder="(11) 99999-9999" />
+            </div>
+            <div class="form-row">
+                <label>E-mail</label>
+                <input name="email" type="email" placeholder="contato@exemplo.com" />
+            </div>
+
+            <!-- OBSERVAÇÕES (full width) -->
+            <div class="form-row col-span-2">
+                <label>Observações</label>
+                <textarea name="notes" rows="1" placeholder="Anotações internas (opcional)"></textarea>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button type="submit" class="btn-primary">Salvar convênio</button>
+            <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
+        </div>
+        </form>
+
+    </div>
+  </div>
+
+  <script>
+    let editingId = null;                  // null = criando, número = editando
+    const modalTitle = document.getElementById('modalTitle'); // já existe no header
+    const tbody = document.getElementById('tbody');
+    const todayBadge = document.getElementById('todayBadge');
+    const modal = document.getElementById('insModal');
+    const openModalBtn = document.getElementById('openModalBtn');
+    const createForm = document.getElementById('createForm');
+
+    // Badge de data (placeholder)
+    const today = new Date();
+    todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+    function rowTpl(i) {
+    const pay = (i.pay_day ? String(i.pay_day).padStart(2,'0') : '—');
+    return `
+        <tr data-id="${i.id}">
+        <td>${i.id}</td>
+        <td>${i.name}</td>
+        <td>${i.ans_code || '—'}</td>
+        <td>${pay}</td>
+        <td>${i.phone || '—'}</td>
+        <td>${i.email || '—'}</td>
+        <td style="text-align:right;">
+            <button class="icon-btn edit-btn" data-id="${i.id}" title="Editar">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"></path>
+            </svg>
+            </button>
+        </td>
+        </tr>
+    `;
+    }
+
+
+
+    async function loadList() {
+      try {
+        const r = await fetch('/api/insurances');
+        const data = await r.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum convênio cadastrado.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(rowTpl).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:crimson">Erro ao carregar.</td></tr>`;
+        console.error(e);
+      }
+    }
+
+    // Delegação para botão Editar
+    document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.edit-btn');
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id');
+    try {
+        const r = await fetch('/api/insurances/' + id);
+        if (!r.ok) { alert('Convênio não encontrado'); return; }
+        const it = await r.json();
+
+        // Preenche o formulário
+        createForm.elements.name.value = it.name || '';
+        createForm.elements.ans_code.value = it.ans_code || '';
+        // pay_day -> popular campo date: usamos o dia corrente neste mês só para exibir
+        if (it.pay_day) {
+        const now = new Date();
+        const m = String(now.getMonth()+1).padStart(2,'0');
+        const d = String(it.pay_day).padStart(2,'0');
+        createForm.elements.pay_day.value = `${now.getFullYear()}-${m}-${d}`;
+        } else {
+        createForm.elements.pay_day.value = '';
+        }
+        createForm.elements.phone.value = it.phone || '';
+        createForm.elements.email.value = it.email || '';
+        createForm.elements.notes.value = it.notes || '';
+
+        editingId = id;
+        modalTitle.textContent = 'Editar Convênio';
+        openModal();
+    } catch (e) {
+        console.error(e);
+        alert('Erro ao carregar convênio');
+    }
+    });
+
+    // ===== Modal helpers =====
+    function openModal(){
+      document.body.classList.add('modal-open');
+      modal.classList.add('modal-open');
+      modal.setAttribute('aria-hidden', 'false');
+      // foca primeiro campo
+      setTimeout(() => modal.querySelector('input[name="name"]')?.focus(), 0);
+    }
+    function closeModal(){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      createForm.reset();
+      editingId = null;
+      modalTitle.textContent = 'Novo Convênio';
+      document.body.classList.remove('modal-open');
+    }
+
+    openModalBtn.addEventListener('click', openModal);
+    modal.addEventListener('click', (e) => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.classList.contains('is-open')) closeModal(); });
+
+    // Submit do modal
+    createForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(createForm);
+    const payload = Object.fromEntries(fd.entries());
+
+    // Valida/transforma data: envia apenas o dia do mês (1..31)
+    if (payload.pay_day) {
+        const d = new Date(payload.pay_day);
+        if (isNaN(d)) { alert('Data de pagamento inválida'); return; }
+        payload.pay_day = d.getDate();
+    } else {
+        payload.pay_day = null;
+    }
+
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `/api/insurances/${editingId}` : '/api/insurances';
+
+    try {
+        const r = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+        });
+        if (!r.ok) {
+        const err = await r.json().catch(()=>({error:'Erro'}));
+        alert(err.error || 'Erro ao salvar');
+        return;
+        }
+        closeModal();
+        editingId = null;
+        modalTitle.textContent = 'Novo Convênio';
+        loadList();
+    } catch (e) {
+        alert('Erro de rede');
+    }
+    });
+
+
+
+    loadList();
+  </script>
+</body>
+</html>

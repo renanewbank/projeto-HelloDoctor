@@ -23,20 +23,20 @@ Stack simples: **Node.js + Express + EJS + PostgreSQL** (HTML/CSS/JS puros).
 
 **Primeiro teste**
 
-* [x] 1.1 Registrar novo prontuário
-* [x] 1.2 Acessar o prontuário criado
-* [x] 1.3 Alterar **nome** e **profissão**
+* [ ] 1.1 Registrar novo prontuário
+* [ ] 1.2 Acessar o prontuário criado
+* [ ] 1.3 Alterar **nome** e **profissão**
 
 **Segundo teste**
 
-* [x] 2.1 Cadastrar convênio fictício
-* [x] 2.2 Atualizar prontuário para usar esse convênio
+* [ ] 2.1 Cadastrar convênio fictício
+* [ ] 2.2 Atualizar prontuário para usar esse convênio
 
 **Terceiro teste**
 
-* [x] 3.1 Criar agendamento para um paciente
-* [x] 3.2 Remarcar para o mês seguinte (data/hora)
-* [x] 3.3 Encontrar o agendamento no calendário
+* [ ] 3.1 Criar agendamento para um paciente
+* [ ] 3.2 Remarcar para o mês seguinte (data/hora)
+* [ ] 3.3 Encontrar o agendamento no calendário
 
 ---
 
@@ -215,4 +215,5 @@ npm run dev     # com --watch
 
 * Flavia Silva
 * Pamella Lopes
+* Renan Ewbank
 * Renan Ewbakn
