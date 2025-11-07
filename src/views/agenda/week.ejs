@@ -1,0 +1,16 @@
+<h1>Agenda semanal</h1>
+<p>Semana de <strong><%= monday %></strong> a <strong><%= sunday %></strong></p>
+
+<table>
+  <thead><tr><th>Data/Hora</th><th>Paciente</th><th>Tipo</th><th>Status</th></tr></thead>
+  <tbody>
+  <% items.forEach(it => { %>
+    <tr>
+      <td><%= it.starts_at.toISOString().replace('T',' ').slice(0,16) %></td>
+      <td><%= it.full_name %></td>
+      <td><%= it.appointment_type %></td>
+      <td><%= it.status %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
