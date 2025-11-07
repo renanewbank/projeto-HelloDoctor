@@ -74,7 +74,7 @@ body{
 h1{ font-size:28px; margin: 8px 0 16px; }
 .section-title{
   font-size:16px; font-weight:700; color:#0b3a67; display:flex; align-items:center; gap:8px;
-  margin: 4px 0 12px;
+  margin: 24px 0 12px;
 }
 .section-title::after{
   content:""; flex:1; height:1px; background: var(--border);
@@ -121,3 +121,79 @@ button:hover{ background: var(--primary-700); }
 .w-200{ width:200px }
 .w-260{ width:260px }
 .w-140{ width:140px }
+
+/* ===== Buttons refinados ===== */
+.btn-primary{ background: var(--primary); color:#fff; font-weight:700; padding:10px 14px; border-radius:5px; border:none; cursor:pointer; }
+.btn-primary:hover{ background: var(--primary-700); }
+.btn-secondary{ background:#eef2f7; color:#0b3a67; font-weight:700; padding:10px 14px; border-radius:10px; border:1px solid var(--border); cursor:pointer; }
+.btn-secondary:hover{ background:#e6edf6; }
+
+/* ===== Modal ===== */
+.modal{ position: fixed; inset:0; display:none; }
+.modal.is-open{ display:block; }
+.modal__backdrop{
+  position:absolute; inset:0; background: rgba(15,23,42,.45); backdrop-filter: blur(2px);
+}
+.modal__dialog{
+  position: relative; margin: 6vh auto; max-width: 640px;
+  background: #fff; border:1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
+  padding: 0; overflow: hidden;
+}
+.modal__header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 16px 18px; border-bottom:1px solid var(--border);
+}
+.modal__header h2{ margin:0; font-size:20px; }
+.modal__close{
+  background:transparent; border:none; font-size:28px; line-height:1; cursor:pointer; color:var(--brand);
+}
+.modal__body{ padding: 16px 18px; }
+.modal__footer{ display:flex; gap:10px; justify-content:flex-start; }
+.form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+.form-row{ display:flex; flex-direction:column; gap:6px; }
+.form-row label{ font-size:13px; color:#0b3a67; font-weight:700; }
+@media (max-width: 640px){
+  .form-grid{ grid-template-columns: 1fr; }
+}
+
+.icon-btn{
+  display:inline-grid; place-items:center;
+  width:34px; height:34px; border-radius:8px;
+  border:1px solid var(--border); background:#fff; cursor:pointer;
+}
+.icon-btn:hover{ background:#f5f8ff; border-color:#cfe0ff; }
+.icon-btn svg{ fill:#0b3a67; }
+
+/* ===== Modal: tornar rolável e fixar header/footer ===== */
+.modal__dialog{
+  max-height: 90vh;              /* não passa da janela */
+  display: flex;
+  flex-direction: column;
+}
+
+.modal__header{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+.modal__body{
+  overflow: auto;      /* rolagem aqui */
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 18px 0 18px;            /* mantém o seu padding */
+}
+
+.modal__footer{
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  z-index: 2;
+  border-top: 1px solid var(--border);
+  padding: 18px 0;
+}
+
+/* evita rolagem do fundo quando o modal estiver aberto */
+body.modal-open{ overflow: hidden; }
+
+
