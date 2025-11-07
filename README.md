@@ -1,7 +1,7 @@
 # HelloDoctor
 
 Protótipo funcional (MVP) de um sistema de consultório médico focado em **Agenda**, **Prontuários** e **Convênios**.
-Stack simples: **Node.js + Express + EJS + PostgreSQL** (HTML/CSS/JS puros).
+Stack simples: **Node.js + Express + HTML/CSS/JS + PostgreSQL** .
 
 ## Funcionalidades (MVP)
 
@@ -43,9 +43,8 @@ Stack simples: **Node.js + Express + EJS + PostgreSQL** (HTML/CSS/JS puros).
 ## Tecnologias
 
 * **Backend:** Node.js, Express, `pg`
-* **Views:** EJS + `express-ejs-layouts`
+* **Frontend:** HTML, CSS, JavaScript
 * **Banco:** PostgreSQL
-* **Estilo:** CSS puro (`public/style.css`)
 
 ---
 
@@ -54,111 +53,21 @@ Stack simples: **Node.js + Express + EJS + PostgreSQL** (HTML/CSS/JS puros).
 ```
 hellodoctor/
   public/
-    style.css
+    styles.css
+    insurances.html
+    patients.html
+    agenda.html
   src/
     app.js
     db.js
     routes/
-      patients.js
-      insurances.js
-      appointments.js
-    views/
-      layout.ejs
-      patients/
-        index.ejs
-        show.ejs
-      insurances/
-        index.ejs
-      agenda/
-        day.ejs
-        week.ejs
+      api/
+        patients.js
+        insurances.js
+        appointments.js
   .env.example
   package.json
 ```
-
----
-
-## Modelagem (mínima)
-
-**patients**
-
-* `id` (BIGSERIAL, PK) — usado como Nº do prontuário
-* `full_name`, `profession?`, `cpf?` (UNIQUE), `phone_mobile?`, `insurance_id?` (FK → `insurances.id`)
-* campos opcionais de endereço/contato e `notes`
-* `created_at`, `updated_at` (TIMESTAMPTZ)
-
-**insurances**
-
-* `id` (BIGSERIAL, PK)
-* `name` (NOT NULL), `ans_code?`, `phone?`, `email?`, `site?`, `ch_value?`, `notes?`
-* `created_at`, `updated_at`
-
-**appointments**
-
-* `id` (BIGSERIAL, PK)
-* `patient_id` (FK), `insurance_id?` (FK)
-* `appointment_type` (`PRIMEIRA_VEZ` | `RETORNO`)
-* `status` (`MARCADO` | `CANCELADO` | `CONCLUIDO`)
-* `starts_at` (**TIMESTAMP sem timezone — horário local como digitado**)
-* `value_amount?`, `notes?`
-* `created_at`, `updated_at`
-
-> **Importante (horário):** por decisão do MVP, não há fuso/horário de verão.
-> Salvamos **exatamente** o que é digitado: `10:00` entra → `10:00` é armazenado/exibido.
-
----
-
-## Configuração
-
-### 1) Banco de dados
-
-Crie o banco e as tabelas (script de schema já aplicado; se precisar, execute o SQL correspondente na sua instância `hellodoctor`).
-Certifique-se de que consegue conectar com seu usuário:
-
-```sql
-\c hellodoctor
-SELECT 1;
-```
-
-### 2) Variáveis de ambiente
-
-Copie o exemplo e edite:
-
-```bash
-cp .env.example .env
-```
-
-Use **um** dos modos abaixo:
-
-**a) Campos separados (recomendado local):**
-
-```
-PGHOST=localhost
-PGPORT=5432
-PGDATABASE=hellodoctor
-PGUSER=seu_usuario
-# PGPASSWORD=        # deixe vazio ou remova se não usa senha
-PGSSL=false
-PORT=3000
-```
-
-**b) DATABASE_URL (opcional):**
-
-```
-DATABASE_URL=postgres://usuario:senha@localhost:5432/hellodoctor
-PGSSL=false
-PORT=3000
-```
-
-### 3) Instalar e iniciar
-
-```bash
-npm install
-npm run dev     # com --watch
-# ou npm start
-# abra http://localhost:3000
-```
-
 ---
 
 ## Rotas principais
@@ -201,8 +110,7 @@ npm run dev     # com --watch
 ---
 
 ## Roadmap (próximos incrementos)
-
-* Modal de “Nova consulta” e “Novo convênio” (UX 1:1 com Figma)
+ 
 * Validações e máscaras (CPF/telefone)
 * Paginação nas listas
 * Cancelar/Concluir consulta
