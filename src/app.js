@@ -28,6 +28,7 @@ app.use('/api/appointments', apiAppointments);
 app.get('/',            (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'patients.html')));
 app.get('/insurances',  (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'insurances.html')));
 app.get('/patients',    (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'patients.html')));
+app.get('/patient',    (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'patients.html')));
 app.get('/agenda-day',  (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'agenda-day.html')));
 app.get('/agenda-week', (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'agenda-week.html')));
 
