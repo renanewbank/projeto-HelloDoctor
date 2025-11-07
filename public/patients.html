@@ -8,7 +8,10 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><div class="logo">H</div>HelloDoctor</div>
+     <div class="brand">
+        <div class="logo">H</div>
+        HelloDoctor
+    </div>
     <nav class="topnav">
       <a href="/agenda-day.html">Agenda</a>
       <a href="/patients.html" class="active">Prontuários</a>
@@ -187,6 +190,10 @@
   const clearBtn   = document.getElementById('clearBtn');
 
   let editingId = null;
+
+  // Badge de data (placeholder)
+    const today = new Date();
+    todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
 
   function openPatModal(){
     document.body.classList.add('modal-open');

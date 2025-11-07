@@ -57,7 +57,7 @@ body{
 }
 .topbar__right{ margin-left:auto; display:flex; gap:12px; align-items:center; }
 .badge{
-  background:#e0f2fe; color:#0b3a67; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700;
+  background:#e0f2fe; color:#0b3a67; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:600;
 }
 
 /* ====== Container ====== */
