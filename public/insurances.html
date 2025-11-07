@@ -199,19 +199,19 @@
     // ===== Modal helpers =====
     function openModal(){
       document.body.classList.add('modal-open');
-      modal.classList.add('modal-open');
+      modal.classList.add('is-open');                  // <-- era 'modal-open'
       modal.setAttribute('aria-hidden', 'false');
-      // foca primeiro campo
       setTimeout(() => modal.querySelector('input[name="name"]')?.focus(), 0);
     }
     function closeModal(){
-      modal.classList.remove('is-open');
+      modal.classList.remove('is-open');               // mantém 'is-open'
       modal.setAttribute('aria-hidden', 'true');
       createForm.reset();
       editingId = null;
       modalTitle.textContent = 'Novo Convênio';
       document.body.classList.remove('modal-open');
     }
+
 
     openModalBtn.addEventListener('click', openModal);
     modal.addEventListener('click', (e) => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
