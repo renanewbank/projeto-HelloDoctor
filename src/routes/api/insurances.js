@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/insurances
 router.get('/', async (req, res) => {
   const r = await pool.query(
-    `SELECT id, name, ans_code, phone, email
+    `SELECT id, name, ans_code, pay_day, phone, email
        FROM insurances
        ORDER BY id DESC
        LIMIT 200`

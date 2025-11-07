@@ -77,7 +77,7 @@
           <select name="gender">
             <option value="male">Masculino</option>
             <option value="female">Feminino</option>
-            <option value="female">Outros</option>
+            <option value="other">Outros</option>
           </select>
         </div>
         <div class="form-row">
@@ -175,180 +175,146 @@
 
 
   <script>
-    const tbody = document.getElementById('tbody');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const modal = document.getElementById('patModal');
-    const createForm = document.getElementById('createForm');
-    const searchForm = document.getElementById('searchForm');
-    const qInput = document.getElementById('q');
-    const clearBtn = document.getElementById('clearBtn');
-    const insSelect = document.getElementById('insSelect');
+  const tbody = document.getElementById('tbody');
+  const openModalBtn = document.getElementById('openModalBtn');
+  const insSelect = document.getElementById('insSelect');
 
-    const patModal = document.getElementById('patModal');
-    const patTitle = document.getElementById('patModalTitle');
-    const patientForm = document.getElementById('patientForm');
-    let editingId = null;
+  const patModal  = document.getElementById('patModal');
+  const patTitle  = document.getElementById('patModalTitle');
+  const patientForm = document.getElementById('patientForm');
+  const searchForm = document.getElementById('searchForm');
+  const qInput     = document.getElementById('q');
+  const clearBtn   = document.getElementById('clearBtn');
 
-    function openPatModal(){ 
-        document.body.classList.add('modal-open');
-        patModal.classList.add('is-open'); 
-        patModal.setAttribute('aria-hidden','false'); 
-        setTimeout(()=>patientForm.full_name.focus(),0); 
-    }
-    function closePatModal(){ 
-        patModal.classList.remove('is-open'); 
-        patModal.setAttribute('aria-hidden','true'); 
-        patientForm.reset(); editingId=null; 
-        patTitle.textContent='Novo prontuário';
-        document.getElementById('saveBtn').textContent='Salvar prontuário'; 
-        document.body.classList.remove('modal-open');
-    }
+  let editingId = null;
 
-    // abrir para criar
-    openModalBtn.addEventListener('click', async ()=>{
-        await loadInsurances();
-        editingId = null;
-        patTitle.textContent = 'Novo prontuário';
-        document.getElementById('saveBtn').textContent='Salvar prontuário';
-        openPatModal();
-    });
+  function openPatModal(){
+    document.body.classList.add('modal-open');
+    patModal.classList.add('is-open');
+    patModal.setAttribute('aria-hidden','false');
+    setTimeout(()=>patientForm.full_name.focus(),0);
+  }
+  function closePatModal(){
+    patModal.classList.remove('is-open');
+    patModal.setAttribute('aria-hidden','true');
+    patientForm.reset();
+    editingId = null;
+    patTitle.textContent = 'Novo Prontuário';
+    document.getElementById('saveBtn').textContent = 'Salvar prontuário';
+    document.body.classList.remove('modal-open');
+  }
 
-    // fechar modal
-    patModal.addEventListener('click', e => { 
-        if (e.target.matches('[data-close], .modal__backdrop')) closePatModal(); 
-    });
-    window.addEventListener('keydown', e => {
-        if (e.key==='Escape' && patModal.classList.contains('is-open')) closePatModal();
-    });
+  // Abrir para criar
+  openModalBtn.addEventListener('click', async ()=>{
+    await loadInsurances();
+    editingId = null;
+    patTitle.textContent = 'Novo Prontuário';
+    document.getElementById('saveBtn').textContent = 'Salvar prontuário';
+    openPatModal();
+  });
 
-    // Delegação para Editar
-    document.addEventListener('click', async (ev)=>{
-        const btn = ev.target.closest('.edit-btn');
-        if (!btn) return;
-        const id = btn.getAttribute('data-id');
-        await loadInsurances(); // garante convênios no select
+  // Fechar modal
+  patModal.addEventListener('click', e => {
+    if (e.target.matches('[data-close], .modal__backdrop')) closePatModal();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key==='Escape' && patModal.classList.contains('is-open')) closePatModal();
+  });
 
-        const r = await fetch('/api/patients/'+id);
-        if (!r.ok){ alert('Paciente não encontrado'); return; }
-        const p = await r.json();
+  // Delegação para Editar
+  document.addEventListener('click', async (ev)=>{
+    const btn = ev.target.closest('.edit-btn');
+    if (!btn) return;
 
-        // preencher campos
-        for (const [k,v] of Object.entries(p)){
-            if (patientForm.elements[k] !== undefined){
-            if (k === 'birth_date' && v) {
-                // backend devolve 'YYYY-MM-DDTHH:MM:SSZ' ou 'YYYY-MM-DD' — normaliza para date
-                patientForm.elements[k].value = String(v).slice(0,10);
-            } else {
-                patientForm.elements[k].value = v ?? '';
-            }
-            }
+    const id = btn.getAttribute('data-id');
+    await loadInsurances();
+
+    const r = await fetch('/api/patients/'+id);
+    if (!r.ok){ alert('Paciente não encontrado'); return; }
+    const p = await r.json();
+
+    for (const [k,v] of Object.entries(p)){
+      if (patientForm.elements[k] !== undefined){
+        if (k === 'birth_date' && v) {
+          patientForm.elements[k].value = String(v).slice(0,10);
+        } else {
+          patientForm.elements[k].value = v ?? '';
+        }
+      }
     }
 
     editingId = id;
     patTitle.textContent = `Editar prontuário #${p.id}`;
     document.getElementById('saveBtn').textContent='Salvar alterações';
     openPatModal();
-    });
+  });
 
-    // submit criar/editar
-    patientForm.addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const fd = new FormData(patientForm);
-        const payload = Object.fromEntries(fd.entries());
+  // Criar/Editar
+  patientForm.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData(patientForm);
+    const payload = Object.fromEntries(fd.entries());
 
-        // strings vazias -> null tratadas no backend (n())
-        const method = editingId ? 'PUT' : 'POST';
-        const url    = editingId ? `/api/patients/${editingId}` : '/api/patients';
+    const method = editingId ? 'PUT' : 'POST';
+    const url    = editingId ? `/api/patients/${editingId}` : '/api/patients';
 
-        const r = await fetch(url, {
-            method, headers:{'Content-Type':'application/json'},
-            body: JSON.stringify(payload)
+    const r = await fetch(url, {
+      method, headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
     });
     if (!r.ok){
-        const err = await r.json().catch(()=>({error:'Erro'}));
-        alert(err.error || 'Erro ao salvar');
-        return;
+      const err = await r.json().catch(()=>({error:'Erro'}));
+      alert(err.error || 'Erro ao salvar');
+      return;
     }
-
     closePatModal();
     loadList(qInput.value.trim());
-    });
+  });
 
+  function rowTpl(p){
+    return `
+      <tr data-id="${p.id}">
+        <td>${p.id}</td>
+        <td>${p.full_name}</td>
+        <td>${p.phone_mobile || '—'}</td>
+        <td>${p.cpf || '—'}</td>
+        <td style="text-align:right">
+          <button class="icon-btn edit-btn" data-id="${p.id}" title="Editar">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"></path>
+            </svg>
+          </button>
+        </td>
+      </tr>
+    `;
+  }
 
+  async function loadInsurances(){
+    const r = await fetch('/api/insurances');
+    const data = await r.json();
+    insSelect.innerHTML = `<option value="">— sem convênio —</option>` +
+      data.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+  }
 
-    function rowTpl(p){
-  return `
-    <tr data-id="${p.id}">
-      <td>${p.id}</td>
-      <td>${p.full_name}</td>
-      <td>${p.phone_mobile || '—'}</td>
-      <td>${p.cpf || '—'}</td>
-      <td style="text-align:right">
-        <button class="icon-btn edit-btn" data-id="${p.id}" title="Editar">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"></path>
-          </svg>
-        </button>
-      </td>
-    </tr>
-  `;
-}
-
-
-    async function loadInsurances(){
-      const r = await fetch('/api/insurances');
-      const data = await r.json();
-      insSelect.innerHTML = `<option value="">— sem convênio —</option>` +
-        data.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+  async function loadList(q=''){
+    const url = q ? `/api/patients?q=${encodeURIComponent(q)}` : '/api/patients';
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!Array.isArray(data) || data.length === 0){
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum prontuário encontrado.</td></tr>`;
+      return;
     }
+    tbody.innerHTML = data.map(rowTpl).join('');
+  }
 
-    async function loadList(q=''){
-      const url = q ? `/api/patients?q=${encodeURIComponent(q)}` : '/api/patients';
-      const r = await fetch(url);
-      const data = await r.json();
-      if (!Array.isArray(data) || data.length === 0){
-        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum prontuário encontrado.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.map(rowTpl).join('');
-    }
+  // Busca
+  searchForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadList(qInput.value.trim()); });
+  clearBtn.addEventListener('click', ()=>{ qInput.value=''; loadList(''); });
 
-    // Modal helpers
-    function openModal(){ modal.classList.add('is-open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>createForm.querySelector('input[name="full_name"]').focus(),0); }
-    function closeModal(){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); createForm.reset(); }
+  // Boot
+  loadInsurances();
+  loadList('');
+</script>
 
-    openModalBtn.addEventListener('click', openModal);
-    modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
-    window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
-
-    // Criar prontuário
-    createForm.addEventListener('submit', async (ev)=>{
-      ev.preventDefault();
-      const fd = new FormData(createForm);
-      const payload = Object.fromEntries(fd.entries());
-      try{
-        const r = await fetch('/api/patients', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
-        if(!r.ok){
-          const err = await r.json().catch(()=>({error:'Erro'}));
-          alert(err.error || 'Erro ao criar');
-          return;
-        }
-        closeModal();
-        loadList(qInput.value.trim());
-      }catch(e){ alert('Erro de rede'); }
-    });
-
-    // Busca
-    searchForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadList(qInput.value.trim()); });
-    clearBtn.addEventListener('click', ()=>{ qInput.value=''; loadList(''); });
-
-    // boot
-    loadInsurances();
-    loadList('');
-  </script>
 </body>
 </html>

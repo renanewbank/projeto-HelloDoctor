@@ -31,6 +31,11 @@ app.get('/patients',    (req,res)=>res.sendFile(path.join(__dirname, '..', 'publ
 app.get('/patient',    (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'patients.html')));
 app.get('/agenda-day',  (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'agenda-day.html')));
 app.get('/agenda-week', (req,res)=>res.sendFile(path.join(__dirname, '..', 'public', 'agenda-week.html')));
+app.get('/health', async (req,res)=>{
+  try { await import('./db.js').then(m=>m.pool.query('SELECT 1')); res.json({ok:true}); }
+  catch(e){ res.status(500).json({ok:false, error:String(e)}); }
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
