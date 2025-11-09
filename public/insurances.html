@@ -29,9 +29,15 @@
 
     <div class="card">
       <div class="header-actions">
+        <form id="searchForm" class="row" style="flex:1">
+          <input class="w-260" id="q" name="q" placeholder="Digite nome, código ANS, telefone ou e-mail......" />
+          <button class="btn-secondary" type="submit">Buscar</button>
+          <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
+        </form>
+
         <div class="primary-actions">
           <button id="openModalBtn" class="btn-primary">
-            + Cadastrar Novo Convênio
+            + Novo Convênio
           </button>
         </div>
       </div>
@@ -110,152 +116,186 @@
   </div>
 
   <script>
-    let editingId = null;                  // null = criando, número = editando
-    const modalTitle = document.getElementById('modalTitle'); // já existe no header
-    const tbody = document.getElementById('tbody');
-    const todayBadge = document.getElementById('todayBadge');
-    const modal = document.getElementById('insModal');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const createForm = document.getElementById('createForm');
+  // ===== elementos base =====
+  const todayBadge   = document.getElementById('todayBadge');
+  const tbody        = document.getElementById('tbody');
+  const openModalBtn = document.getElementById('openModalBtn');
+  const modal        = document.getElementById('insModal');
+  const modalTitle   = document.getElementById('modalTitle');
+  const createForm   = document.getElementById('createForm');
 
-    // Badge de data (placeholder)
-    const today = new Date();
-    todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  // busca (igual ao padrão de Prontuários)
+  const searchForm = document.getElementById('searchForm');
+  const qInput     = document.getElementById('q');
+  const clearBtn   = document.getElementById('clearBtn');
 
-    function rowTpl(i) {
+  // estado
+  let editingId = null;
+
+  // badge de data
+  todayBadge.textContent = new Date().toLocaleDateString(
+    'pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }
+  );
+
+  // ===== render de linha =====
+  function rowTpl(i) {
     const pay = (i.pay_day ? String(i.pay_day).padStart(2,'0') : '—');
     return `
-        <tr data-id="${i.id}">
+      <tr data-id="${i.id}">
         <td>${i.id}</td>
         <td>${i.name}</td>
         <td>${i.ans_code || '—'}</td>
         <td>${pay}</td>
         <td>${i.phone || '—'}</td>
         <td>${i.email || '—'}</td>
-        <td style="text-align:center;">
-            <button class="icon-btn edit-btn" data-id="${i.id}" title="Editar">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"></path>
-            </svg>
+        <td style="text-align:right;">
+          <div class="kebab-wrap">
+            <button style="padding:0" class="kebab-btn" data-kebab="${i.id}" aria-label="Menu">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/>
+              </svg>
             </button>
+            <div class="kebab-pop" id="kebab-${i.id}">
+              <button class="kebab-item" data-action="edit" data-id="${i.id}">Editar</button>
+              <button class="kebab-item danger" data-action="delete" data-id="${i.id}">Excluir</button>
+            </div>
+          </div>
         </td>
-        </tr>
+      </tr>
     `;
-    }
+  }
 
-
-
-    async function loadList() {
-      try {
-        const r = await fetch('/api/insurances');
-        const data = await r.json();
-        if (!Array.isArray(data) || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum convênio cadastrado.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = data.map(rowTpl).join('');
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" style="color:crimson">Erro ao carregar.</td></tr>`;
-        console.error(e);
-      }
-    }
-
-    // Delegação para botão Editar
-    document.addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('.edit-btn');
-    if (!btn) return;
-
-    const id = btn.getAttribute('data-id');
+  // ===== listagem com suporte a busca (padrão prontuários) =====
+  async function loadList(q='') {
+    const url = q ? `/api/insurances?q=${encodeURIComponent(q)}` : '/api/insurances';
     try {
-        const r = await fetch('/api/insurances/' + id);
-        if (!r.ok) { alert('Convênio não encontrado'); return; }
-        const it = await r.json();
-
-        // Preenche o formulário
-        createForm.elements.name.value = it.name || '';
-        createForm.elements.ans_code.value = it.ans_code || '';
-        // pay_day -> popular campo date: usamos o dia corrente neste mês só para exibir
-        if (it.pay_day) {
-        const now = new Date();
-        const m = String(now.getMonth()+1).padStart(2,'0');
-        const d = String(it.pay_day).padStart(2,'0');
-        createForm.elements.pay_day.value = `${now.getFullYear()}-${m}-${d}`;
-        } else {
-        createForm.elements.pay_day.value = '';
-        }
-        createForm.elements.phone.value = it.phone || '';
-        createForm.elements.email.value = it.email || '';
-        createForm.elements.notes.value = it.notes || '';
-
-        editingId = id;
-        modalTitle.textContent = 'Editar Convênio';
-        openModal();
+      const r = await fetch(url);
+      const data = await r.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--muted)">Nenhum convênio encontrado.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(rowTpl).join('');
     } catch (e) {
-        console.error(e);
-        alert('Erro ao carregar convênio');
+      tbody.innerHTML = `<tr><td colspan="7" style="color:crimson">Erro ao carregar.</td></tr>`;
+      console.error(e);
     }
-    });
+  }
 
-    // ===== Modal helpers =====
-    function openModal(){
-      document.body.classList.add('modal-open');
-      modal.classList.add('is-open');                  // <-- era 'modal-open'
-      modal.setAttribute('aria-hidden', 'false');
-      setTimeout(() => modal.querySelector('input[name="name"]')?.focus(), 0);
-    }
-    function closeModal(){
-      modal.classList.remove('is-open');               // mantém 'is-open'
-      modal.setAttribute('aria-hidden', 'true');
-      createForm.reset();
-      editingId = null;
-      modalTitle.textContent = 'Novo Convênio';
-      document.body.classList.remove('modal-open');
-    }
+  // ===== modal helpers =====
+  function openModal(){
+    document.body.classList.add('modal-open');
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden','false');
+    setTimeout(()=> modal.querySelector('input[name="name"]')?.focus(), 0);
+  }
+  function closeModal(){
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+    createForm.reset();
+    editingId = null;
+    modalTitle.textContent = 'Novo Convênio';
+  }
+  openModalBtn.addEventListener('click', openModal);
+  modal.addEventListener('click', (e)=>{ if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+  window.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
 
-
-    openModalBtn.addEventListener('click', openModal);
-    modal.addEventListener('click', (e) => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
-    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.classList.contains('is-open')) closeModal(); });
-
-    // Submit do modal
-    createForm.addEventListener('submit', async (ev) => {
+  // ===== submit do modal (criar/editar) =====
+  createForm.addEventListener('submit', async (ev)=>{
     ev.preventDefault();
     const fd = new FormData(createForm);
     const payload = Object.fromEntries(fd.entries());
 
-    // Valida/transforma data: envia apenas o dia do mês (1..31)
+    // converte data para apenas o dia do mês (1..31) se preenchido
     if (payload.pay_day) {
-        const d = new Date(payload.pay_day);
-        if (isNaN(d)) { alert('Data de pagamento inválida'); return; }
-        payload.pay_day = d.getDate();
+      const d = new Date(payload.pay_day);
+      if (isNaN(d)) { alert('Data de pagamento inválida'); return; }
+      payload.pay_day = d.getDate();
     } else {
-        payload.pay_day = null;
+      payload.pay_day = null;
     }
 
     const method = editingId ? 'PUT' : 'POST';
-    const url = editingId ? `/api/insurances/${editingId}` : '/api/insurances';
+    const url    = editingId ? `/api/insurances/${editingId}` : '/api/insurances';
 
-    try {
-        const r = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-        });
-        if (!r.ok) {
-        const err = await r.json().catch(()=>({error:'Erro'}));
-        alert(err.error || 'Erro ao salvar');
-        return;
-        }
-        closeModal();
-        editingId = null;
-        modalTitle.textContent = 'Novo Convênio';
-        loadList();
-    } catch (e) {
-        alert('Erro de rede');
-    }
+    const r = await fetch(url, {
+      method, headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
     });
+    if (!r.ok){
+      const err = await r.json().catch(()=>({error:'Erro'}));
+      alert(err.error || 'Erro ao salvar');
+      return;
+    }
+    closeModal();
+    loadList(qInput.value.trim());
+  });
 
-    loadList();
-  </script>
+  // ===== kebab: abrir/fechar =====
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-kebab]');
+    const all = document.querySelectorAll('.kebab-pop');
+    if (btn){
+      const id  = btn.getAttribute('data-kebab');
+      const pop = document.getElementById('kebab-'+id);
+      all.forEach(p => { if (p!==pop) p.classList.remove('open'); });
+      pop.classList.toggle('open');
+      return;
+    }
+    if (!e.target.closest('.kebab-wrap')) all.forEach(p=>p.classList.remove('open'));
+  });
+
+  // ===== ações do kebab (editar/excluir) =====
+  document.addEventListener('click', async (e)=>{
+    const item = e.target.closest('.kebab-item');
+    if (!item) return;
+
+    const action = item.getAttribute('data-action');
+    const id     = item.getAttribute('data-id');
+
+    if (action === 'edit'){
+      const r = await fetch('/api/insurances/'+id);
+      if (!r.ok){ alert('Convênio não encontrado'); return; }
+      const it = await r.json();
+
+      createForm.elements.name.value     = it.name || '';
+      createForm.elements.ans_code.value = it.ans_code || '';
+      if (it.pay_day){
+        const now = new Date(), m = String(now.getMonth()+1).padStart(2,'0');
+        createForm.elements.pay_day.value = `${now.getFullYear()}-${m}-${String(it.pay_day).padStart(2,'0')}`;
+      } else {
+        createForm.elements.pay_day.value = '';
+      }
+      createForm.elements.phone.value = it.phone || '';
+      createForm.elements.email.value = it.email || '';
+      createForm.elements.notes.value = it.notes || '';
+
+      editingId = id;
+      modalTitle.textContent = 'Editar Convênio';
+      openModal();
+    }
+
+    if (action === 'delete'){
+      if (!confirm('Excluir este convênio?')) return;
+      const r = await fetch('/api/insurances/'+id, { method:'DELETE' });
+      if (!r.ok){ alert('Falha ao excluir'); return; }
+      loadList(qInput.value.trim());
+    }
+  });
+
+  // ===== busca (igual prontoários) =====
+  searchForm.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    loadList(qInput.value.trim());
+  });
+  clearBtn.addEventListener('click', ()=>{
+    qInput.value = '';
+    loadList('');
+  });
+
+  // boot
+  loadList('');
+</script>
 </body>
 </html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>HelloDoctor — Agenda (Semana)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .week-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:12px; }
+    .day-col { border:1px solid var(--border); border-radius:8px; background:#fff; padding:10px; }
+    .day-col h3 { margin:4px 0 8px; font-size:14px; color:#0b3a67; }
+    .item { padding:8px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
+    .t { font-size:12px; color:var(--muted); }
+    .who { font-weight:700; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="logo">H</div>HelloDoctor</div>
+    <nav class="topnav">
+      <a href="/agenda-day.html">Agenda</a>
+      <a href="/patients.html">Prontuários</a>
+      <a href="/insurances.html">Convênios</a>
+      <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
+    </nav>
+    <div class="topbar__right">
+      <span class="badge" id="todayBadge"></span>
+      <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>Agenda da Semana</h1>
+    <div class="card">
+      <div class="header-actions">
+        <div class="segmented">
+          <a href="/agenda-day.html">DIA</a>
+          <a href="/agenda-week.html" class="active">SEMANA</a>
+        </div>
+
+        <div class="toolbar">
+          <div class="pager">
+            <button id="prevWeek" class="pager__btn" title="Semana anterior">‹</button>
+            <span id="weekLabel" class="pager__label">—</span>
+            <button id="nextWeek" class="pager__btn" title="Próxima semana">›</button>
+          </div>
+        </div>
+
+        <div class="primary-actions">
+          <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+        </div>
+      </div>
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+  </div>
+
+  <script>
+  // Badge
+  document.getElementById('todayBadge').textContent =
+    new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  const grid = document.getElementById('weekGrid');
+  const prevWeek = document.getElementById('prevWeek');
+  const nextWeek = document.getElementById('nextWeek');
+  const weekLabel = document.getElementById('weekLabel');
+
+  // helpers de data
+  const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; };
+  const ymd = d => d.toISOString().slice(0,10);
+  function startOfWeek(d){
+    const x = new Date(d);
+    const day = (x.getDay()+6)%7; // segunda=0
+    x.setDate(x.getDate()-day);
+    x.setHours(0,0,0,0);
+    return x;
+  }
+  function fmtRange(a,b){
+    const left  = a.toLocaleDateString('pt-BR', { day:'2-digit', month:'long' });
+    const right = b.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+    return `${left} a ${right}`;
+  }
+
+  // estado da âncora (segunda-feira da semana visível)
+  let anchor = startOfWeek(new Date());
+
+  // render
+  function byDayKey(dt){ return new Date(dt).toISOString().slice(0,10); }
+
+  function renderWeek(arr, startDate){
+    // monta 7 colunas
+    const days = [];
+    for (let i=0;i<7;i++){
+      const d = addDays(startDate,i);
+      days.push({ key: ymd(d), label: d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit' }) });
+    }
+    const groups = Object.groupBy(arr, x => byDayKey(x.starts_at));
+    grid.innerHTML = days.map(d=>{
+      const items = (groups[d.key]||[]).map(a=>{
+        const t = new Date(a.starts_at).toTimeString().slice(0,5);
+        return `<div class="item"><div class="who">${a.patient_name}</div><div class="t">${t} • ${a.insurance_name || 'Particular'}</div></div>`;
+      }).join('');
+      return `<div class="day-col"><h3>${d.label}</h3>${items || '<div class="t">— sem consultas —</div>'}</div>`;
+    }).join('');
+  }
+
+  async function refreshWeek(){
+    const start = startOfWeek(anchor);
+    const end   = addDays(start,6);
+    weekLabel.textContent = fmtRange(start,end);
+
+    const r = await fetch(`/api/appointments/week?start=${ymd(start)}`);
+    const data = await r.json();
+    renderWeek(data, start);
+  }
+
+  // navegação por setas
+  prevWeek.addEventListener('click', ()=>{ anchor = addDays(anchor, -7); refreshWeek(); });
+  nextWeek.addEventListener('click', ()=>{ anchor = addDays(anchor,  7); refreshWeek(); });
+  window.addEventListener('keydown', e=>{
+    if (e.key === 'ArrowLeft')  prevWeek.click();
+    if (e.key === 'ArrowRight') nextWeek.click();
+  });
+
+  // boot
+  (function init(){
+    const urlStart = new URLSearchParams(location.search).get('start');
+    if (urlStart){ const d = new Date(urlStart); if (!isNaN(d)) anchor = startOfWeek(d); }
+    refreshWeek();
+  })();
+</script>
+</body>
+</html>

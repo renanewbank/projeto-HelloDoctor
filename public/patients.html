@@ -35,7 +35,7 @@
           <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
         </form>
         <div class="primary-actions">
-          <button id="openModalBtn" class="btn-primary">+ Cadastrar Novo Prontuário</button>
+          <button id="openModalBtn" class="btn-primary">+ Novo Prontuário</button>
         </div>
       </div>
 
@@ -138,6 +138,10 @@
           <input name="address_district" />
         </div>
         <div class="form-row">
+          <label>Cidade</label>
+          <input name="address_" />
+        </div>
+        <div class="form-row">
           <label>Estado</label>
           <input name="address_state" />
         </div>
@@ -171,13 +175,16 @@
       <div class="modal__footer">
         <button type="submit" class="btn-primary" id="saveBtn">Salvar prontuário</button>
         <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
+        <button type="button" class="btn-secondary" id="printBtn" style="margin-left:auto; display:none;">Imprimir</button>
+        <button type="button" class="btn-secondary danger" id="deleteBtn" style="display:none;">Excluir prontuário</button>
       </div>
+
     </form>
   </div>
 </div>
 
 
-  <script>
+<script>
   const tbody = document.getElementById('tbody');
   const openModalBtn = document.getElementById('openModalBtn');
   const insSelect = document.getElementById('insSelect');
@@ -192,8 +199,8 @@
   let editingId = null;
 
   // Badge de data (placeholder)
-    const today = new Date();
-    todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  const today = new Date();
+  todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
 
   function openPatModal(){
     document.body.classList.add('modal-open');
@@ -201,15 +208,17 @@
     patModal.setAttribute('aria-hidden','false');
     setTimeout(()=>patientForm.full_name.focus(),0);
   }
-  function closePatModal(){
+  function closePatModal(){ 
     patModal.classList.remove('is-open');
     patModal.setAttribute('aria-hidden','true');
-    patientForm.reset();
-    editingId = null;
-    patTitle.textContent = 'Novo Prontuário';
-    document.getElementById('saveBtn').textContent = 'Salvar prontuário';
+    patientForm.reset(); editingId=null; 
+    patTitle.textContent='Novo prontuário';
+    document.getElementById('saveBtn').textContent='Salvar prontuário';
+    document.getElementById('deleteBtn').style.display='none';
+    document.getElementById('printBtn').style.display='none';
     document.body.classList.remove('modal-open');
   }
+
 
   // Abrir para criar
   openModalBtn.addEventListener('click', async ()=>{
@@ -228,33 +237,7 @@
     if (e.key==='Escape' && patModal.classList.contains('is-open')) closePatModal();
   });
 
-  // Delegação para Editar
-  document.addEventListener('click', async (ev)=>{
-    const btn = ev.target.closest('.edit-btn');
-    if (!btn) return;
 
-    const id = btn.getAttribute('data-id');
-    await loadInsurances();
-
-    const r = await fetch('/api/patients/'+id);
-    if (!r.ok){ alert('Paciente não encontrado'); return; }
-    const p = await r.json();
-
-    for (const [k,v] of Object.entries(p)){
-      if (patientForm.elements[k] !== undefined){
-        if (k === 'birth_date' && v) {
-          patientForm.elements[k].value = String(v).slice(0,10);
-        } else {
-          patientForm.elements[k].value = v ?? '';
-        }
-      }
-    }
-
-    editingId = id;
-    patTitle.textContent = `Editar prontuário #${p.id}`;
-    document.getElementById('saveBtn').textContent='Salvar alterações';
-    openPatModal();
-  });
 
   // Criar/Editar
   patientForm.addEventListener('submit', async (ev)=>{
@@ -286,11 +269,16 @@
         <td>${p.phone_mobile || '—'}</td>
         <td>${p.cpf || '—'}</td>
         <td style="text-align:right">
-          <button class="icon-btn edit-btn" data-id="${p.id}" title="Editar">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"></path>
-            </svg>
-          </button>
+          <div class="kebab-wrap">
+            <button style="padding:0" class="kebab-btn" data-kebab="${p.id}" aria-label="Menu">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
+            </button>
+            <div class="kebab-pop" id="kebab-${p.id}">
+              <button class="kebab-item" data-action="edit" data-id="${p.id}">Editar</button>
+              <button class="kebab-item small" data-action="print" data-id="${p.id}">Imprimir</button>
+              <button class="kebab-item danger" data-action="delete" data-id="${p.id}">Excluir</button>
+            </div>
+          </div>
         </td>
       </tr>
     `;
@@ -317,6 +305,174 @@
   // Busca
   searchForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadList(qInput.value.trim()); });
   clearBtn.addEventListener('click', ()=>{ qInput.value=''; loadList(''); });
+
+  // === toggle abre/fecha dos menus (kebab) ===
+  document.addEventListener('click', (e)=>{
+    if (!e.target.closest('.menu-wrap')) {
+      document.querySelectorAll('.menu-pop.is-open').forEach(el=>el.classList.remove('is-open'));
+      return;
+    }
+    const kb = e.target.closest('[data-kebab]');
+    if (kb){
+      const menu = kb.parentElement.querySelector('.menu-pop');
+      document.querySelectorAll('.menu-pop.is-open').forEach(el=>el!==menu && el.classList.remove('is-open'));
+      menu.classList.toggle('is-open');
+    }
+  });
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.querySelectorAll('.menu-pop.is-open').forEach(el=>el.classList.remove('is-open')); });
+
+  // === ações do menu (editar / imprimir / excluir) ===
+  document.addEventListener('click', async (e)=>{
+    const actBtn = e.target.closest('.menu-pop [data-action]');
+    if(!actBtn) return;
+    const id = actBtn.getAttribute('data-id');
+    const action = actBtn.getAttribute('data-action');
+
+    if(action==='edit'){
+      await loadInsurances();
+      const r = await fetch('/api/patients/'+id);
+      if(!r.ok){ alert('Paciente não encontrado'); return; }
+      const p = await r.json();
+      for (const [k,v] of Object.entries(p)){
+        if (patientForm.elements[k] !== undefined){
+          if (k==='birth_date' && v) patientForm.elements[k].value = String(v).slice(0,10);
+          else patientForm.elements[k].value = v ?? '';
+        }
+      }
+      editingId = id;
+      patTitle.textContent = `Editar prontuário #${p.id}`;
+      document.getElementById('saveBtn').textContent='Salvar alterações';
+      openPatModal();
+    }
+
+    if(action==='print'){
+      const r = await fetch('/api/patients/'+id);
+      if(!r.ok){ alert('Paciente não encontrado'); return; }
+      const p = await r.json();
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html><head><title>Prontuário #${p.id}</title></head>
+        <body style="font-family:Arial;padding:20px">
+          <h2>Prontuário #${p.id}</h2>
+          <p><strong>Nome:</strong> ${p.full_name}</p>
+          <p><strong>CPF:</strong> ${p.cpf || '—'}</p>
+          <p><strong>Telefone:</strong> ${p.phone_mobile || '—'}</p>
+          <p><strong>E-mail:</strong> ${p.email || '—'}</p>
+          <br/>
+          <p><strong>Observações:</strong><br/>${(p.notes||'—').toString().replace(/\n/g,'<br>')}</p>
+          <script>window.onload=()=>\`window.print()\`<\/script>
+        </body></html>
+      `);
+      w.document.close();
+    }
+
+    if(action==='delete'){
+      if(!confirm('Excluir este prontuário?')) return;
+      const r = await fetch('/api/patients/'+id, { method:'DELETE' });
+      if(!r.ok){ const er = await r.json().catch(()=>({error:'Erro'})); alert(er.error||'Erro ao excluir'); return; }
+      loadList(qInput.value.trim());
+    }
+  });
+
+  // abre/fecha popover
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-kebab]');
+    const anyPop = document.querySelectorAll('.kebab-pop');
+    if (btn){
+      const id = btn.getAttribute('data-kebab');
+      const pop = document.getElementById('kebab-'+id);
+      anyPop.forEach(p => { if (p!==pop) p.classList.remove('open'); });
+      pop.classList.toggle('open');
+      return;
+    }
+    if (!e.target.closest('.kebab-wrap')) anyPop.forEach(p=>p.classList.remove('open'));
+  });
+
+  // ações do popover
+  document.addEventListener('click', async (e)=>{
+    const item = e.target.closest('.kebab-item');
+    if (!item) return;
+    const action = item.getAttribute('data-action');
+    const id = item.getAttribute('data-id');
+
+    if (action === 'edit'){
+      await loadInsurances();
+      const r = await fetch('/api/patients/'+id);
+      if (!r.ok){ alert('Paciente não encontrado'); return; }
+      const p = await r.json();
+
+      // preenche form
+      for (const [k,v] of Object.entries(p)){
+        if (patientForm.elements[k] !== undefined){
+          if (k==='birth_date' && v) patientForm.elements[k].value = String(v).slice(0,10);
+          else patientForm.elements[k].value = v ?? '';
+        }
+      }
+
+      editingId = id;
+      patTitle.textContent = `Editar prontuário #${p.id}`;
+      document.getElementById('saveBtn').textContent='Salvar alterações';
+      // mostra botões extras em modo edição
+      document.getElementById('deleteBtn').style.display = 'inline-block';
+      document.getElementById('printBtn').style.display  = 'inline-block';
+      openPatModal();
+    }
+
+    if (action === 'delete'){
+      if (!confirm('Excluir este prontuário?')) return;
+      const r = await fetch('/api/patients/'+id, { method:'DELETE' });
+      if (!r.ok){ alert('Falha ao excluir'); return; }
+      loadList(qInput.value.trim());
+    }
+
+    if (action === 'print'){
+      printPatient(id);
+    }
+  });
+
+  // botões dentro do modal grande (modo edição)
+  document.getElementById('deleteBtn').addEventListener('click', async ()=>{
+    if (!editingId) return;
+    if (!confirm('Excluir este prontuário?')) return;
+    const r = await fetch('/api/patients/'+editingId, { method:'DELETE' });
+    if (!r.ok){ alert('Falha ao excluir'); return; }
+    closePatModal();
+    loadList(qInput.value.trim());
+  });
+
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    if (editingId) printPatient(editingId);
+  });
+
+  // impressão simples
+  async function printPatient(id){
+    const r = await fetch('/api/patients/'+id);
+    if (!r.ok){ alert('Paciente não encontrado'); return; }
+    const p = await r.json();
+
+    const w = window.open('', '_blank');
+    w.document.write(`
+      <html><head><title>Prontuário #${p.id}</title>
+        <style>
+          body{ font-family: Arial, sans-serif; padding:24px }
+          h1{ margin:0 0 10px }
+          hr{ margin:16px 0 }
+          .row{ margin:6px 0 }
+          .lbl{ color:#555 }
+        </style>
+      </head><body>
+        <h1>Prontuário #${p.id}</h1>
+        <div class="row"><span class="lbl">Nome: </span>${p.full_name || ''}</div>
+        <div class="row"><span class="lbl">CPF: </span>${p.cpf || ''}</div>
+        <div class="row"><span class="lbl">Telefone: </span>${p.phone_mobile || ''}</div>
+        <div class="row"><span class="lbl">Convênio: </span>${p.insurance_id || '—'}</div>
+        <hr/>
+        <div class="row"><span class="lbl">Observações: </span>${(p.notes||'').replaceAll('<','&lt;')}</div>
+        <script>window.print();<\/script>
+      </body></html>
+    `);
+    w.document.close();
+  }
 
   // Boot
   loadInsurances();

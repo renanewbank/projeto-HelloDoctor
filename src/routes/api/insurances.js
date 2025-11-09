@@ -67,4 +67,15 @@ router.put('/:id', async (req, res) => {
   res.json(q.rows[0]);
 });
 
+// DELETE /api/insurances/:id
+router.delete('/:id', async (req,res)=>{
+  const { id } = req.params;
+  // se houver FK em patients, você pode trocar por SET NULL (já está no schema) ou bloquear.
+  const r = await pool.query('DELETE FROM insurances WHERE id=$1', [id]);
+  if(!r.rowCount) return res.status(404).json({ error:'not found' });
+  res.json({ ok:true });
+});
+
+
+
 export default router;

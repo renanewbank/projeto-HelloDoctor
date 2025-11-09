@@ -33,7 +33,7 @@ router.get('/:id', async (req, res) => {
     `SELECT
        id, full_name, social_name, gender, birth_date, profession, marital_status, nationality,
        cpf, insurance_id, insurance_card,
-       cep, address_street, address_number, address_comp, address_district, address_state, address_country,
+       cep, address_street, address_number, address_comp, address_district, address_city, address_state, address_country,
        email, phone_mobile, phone_landline,
        notes, created_at, updated_at
      FROM patients WHERE id=$1`,
@@ -52,15 +52,15 @@ router.post('/', async (req, res) => {
     INSERT INTO patients (
       full_name, social_name, gender, birth_date, profession, marital_status, nationality,
       cpf, insurance_id, insurance_card,
-      cep, address_street, address_number, address_comp, address_district, address_state, address_country,
+      cep, address_street, address_number, address_comp, address_district, address_city, address_state, address_country,
       email, phone_mobile, phone_landline,
       notes
     ) VALUES (
       $1,$2,$3,$4,$5,$6,$7,
       $8,$9,$10,
-      $11,$12,$13,$14,$15,$16,$17,
-      $18,$19,$20,
-      $21
+      $11,$12,$13,$14,$15,$16,$17,$18,
+      $19,$20, $21, 
+      $22
     )
     RETURNING id, full_name, profession, cpf, phone_mobile, insurance_id
   `;
@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
   const params = [
     b.full_name.trim(), n(b.social_name), n(b.gender), n(b.birth_date), n(b.profession), n(b.marital_status), n(b.nationality),
     n(b.cpf), n(b.insurance_id), n(b.insurance_card),
-    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_state), n(b.address_country),
+    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_city), n(b.address_state), n(b.address_country),
     n(b.email), n(b.phone_mobile), n(b.phone_landline),
     n(b.notes),
   ];
@@ -87,9 +87,9 @@ router.put('/:id', async (req, res) => {
     UPDATE patients SET
       full_name=$2, social_name=$3, gender=$4, birth_date=$5, profession=$6, marital_status=$7, nationality=$8,
       cpf=$9, insurance_id=$10, insurance_card=$11,
-      cep=$12, address_street=$13, address_number=$14, address_comp=$15, address_district=$16, address_state=$17, address_country=$18,
-      email=$19, phone_mobile=$20, phone_landline=$21,
-      notes=$22, updated_at=NOW()
+      cep=$12, address_street=$13, address_number=$14, address_comp=$15, address_district=$16, address_city=$17, address_state=$18, address_country=$19,
+      email=$20, phone_mobile=$21, phone_landline=$22,
+      notes=$23, updated_at=NOW()
     WHERE id=$1
     RETURNING id, full_name, profession, cpf, phone_mobile, insurance_id
   `;
@@ -98,7 +98,7 @@ router.put('/:id', async (req, res) => {
     id,
     b.full_name.trim(), n(b.social_name), n(b.gender), n(b.birth_date), n(b.profession), n(b.marital_status), n(b.nationality),
     n(b.cpf), n(b.insurance_id), n(b.insurance_card),
-    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_state), n(b.address_country),
+    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_city), n(b.address_state), n(b.address_country),
     n(b.email), n(b.phone_mobile), n(b.phone_landline),
     n(b.notes),
   ];
@@ -107,5 +107,14 @@ router.put('/:id', async (req, res) => {
   if (!r.rowCount) return res.status(404).json({ error: 'not found' });
   res.json(r.rows[0]);
 });
+
+// DELETE /api/patients/:id
+router.delete('/:id', async (req,res)=>{
+  const { id } = req.params;
+  const r = await pool.query('DELETE FROM patients WHERE id=$1', [id]);
+  if(!r.rowCount) return res.status(404).json({ error:'not found' });
+  res.json({ ok:true });
+});
+
 
 export default router;

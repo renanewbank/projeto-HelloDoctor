@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <title>HelloDoctor — Agenda Semanal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <div class="logo">H</div>
+            HelloDoctor
+        </div>
+
+        <nav class="topnav">
+            <a href="/agenda-day.html" class="active">Agenda</a>
+            <a href="/patients.html">Prontuários</a>
+            <a href="/insurances.html">Convênios</a>
+            <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
+        </nav>
+
+        <div class="topbar__right">
+            <span class="badge" id="todayBadge"></span>
+            <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
+        </div>
+    </header>
+
+    <div class="container" style="">
+        <h1>Agenda Semanal</h1>
+        <div class="card">
+            <div class="agenda-actions">
+                <div class="segmented">
+                    <a href="/agenda-day.html">DIA</a>
+                    <a href="/agenda-week.html" class="active">SEMANA</a>
+                </div>                
+                <div class="date-nav">
+                    <button class="btn-ghost" id="prevWeekBtn"><</button>
+                    <span id="currentWeekTitle">Carregando semana...</span>
+                    <button class="btn-ghost" id="nextWeekBtn">></button>
+                </div>
+            </div>
+
+            <div class="weekly-schedule">
+                <div class="time-column">
+                    <div class="time-slot">08:00</div>
+                    <div class="time-slot">08:30</div>
+                    <div class="time-slot">09:00</div>
+                    <div class="time-slot">09:30</div>
+                    <div class="time-slot">10:00</div>
+                    <div class="time-slot">10:30</div>
+                    <div class="time-slot">11:00</div>
+                    <div class="time-slot">11:30</div>
+                    <div class="time-slot">12:00</div>
+                    <div class="time-slot">12:30</div>
+                    <div class="time-slot" style="color:var(--muted); font-weight:400; background:#f9fafb;">Almoço</div>
+                    <div class="time-slot">14:00</div>
+                    <div class="time-slot">14:30</div>
+                    <div class="time-slot">15:00</div>
+                    <div class="time-slot">15:30</div>
+                    <div class="time-slot">16:00</div>
+                    <div class="time-slot">16:30</div>
+                    <div class="time-slot">17:00</div>
+                    <div class="time-slot">17:30</div>
+                    <div class="time-slot">18:00</div>
+                    <div class="time-slot">18:30</div>
+                </div>
+                <div id="weekDaysContainer" class="days-container"></div>
+                
+            </div>
+        </div>
+    </div>
+    
+    
+    <script src="https://unpkg.com/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="https://unpkg.com/dayjs@1.11.10/plugin/localizedFormat.js"></script>
+    <script src="https://unpkg.com/dayjs@1.11.10/plugin/isBetween.js"></script>
+    <script src="https://unpkg.com/dayjs@1.11.10/plugin/weekday.js"></script>
+    <script>
+    dayjs.extend(dayjs.plugin.localizedFormat);
+    dayjs.extend(dayjs.plugin.isBetween);
+    dayjs.extend(dayjs.plugin.weekday);
+    </script>
+
+    <script>
+    const todayBadge = document.getElementById('todayBadge');
+    const currentWeekTitle = document.getElementById('currentWeekTitle');
+    const weekDaysContainer = document.getElementById('weekDaysContainer');
+    
+    // Define o início da semana como Domingo (locale 'pt-br' geralmente é Sunday=0)
+    let currentWeekStart = dayjs().startOf('week'); 
+    
+    // Badge de data no header
+    todayBadge.textContent = dayjs().locale('pt-br').format('dddd, DD [de] MMMM [de] YYYY');
+
+
+    function loadWeeklyAgenda() {
+    const weekEnd = currentWeekStart.add(6, 'day');
+    currentWeekTitle.textContent = `${currentWeekStart.format('DD [de] MMMM')} a ${weekEnd.format('DD [de] MMMM')}`;
+
+    let html = '';
+    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+    // Gera 7 colunas (Domingo a Sábado)
+    for (let i = 0; i < 7; i++) {
+    const day = currentWeekStart.add(i, 'day');
+    const isToday = day.isSame(dayjs(), 'day');
+    const dayClass = isToday ? 'day-column today' : 'day-column';
+    
+    html += `
+    <div class="${dayClass}">
+    <div class="day-header">
+    <span>${days[i].slice(0,3)}</span>
+    <span class="date">${day.format('DD/MMM')}</span>
+    </div>
+    <div class="appointments-box" data-date="${day.format('YYYY-MM-DD')}">
+    ${i === 2 ? `<div class="appointment-block" style="top: 45px; height: 45px;">Paciente Teste (08:30)</div>` : ''}
+    </div>
+    </div>
+    `;
+    }
+    weekDaysContainer.innerHTML = html;
+    
+    // Navegação na URL
+    const newUrl = `${window.location.pathname}?start=${currentWeekStart.format('YYYY-MM-DD')}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+    }
+
+     // Navegação Semanal
+     document.getElementById('prevWeekBtn').addEventListener('click', () => { currentWeekStart = currentWeekStart.subtract(1, 'week'); loadWeeklyAgenda(); });
+     document.getElementById('nextWeekBtn').addEventListener('click', () => { currentWeekStart = currentWeekStart.add(1, 'week'); loadWeeklyAgenda(); });
+
+     // Inicialização
+     loadWeeklyAgenda();
+     </script>
+
+</body>
+</html>

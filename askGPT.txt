@@ -1,0 +1,3 @@
+- Vou renunciar essa feature de buscas de Convênio e manter somente a lista e o botão "Novo Convênio". 
+- Vamos trabalhar no teste 1.2 - Acessar o prontuário criado
+- Na pagina Prontuários, na tabela que lista os pacientes do dia, precisamos fazer acessar as informações 

@@ -23,20 +23,20 @@ Stack simples: **Node.js + Express + HTML/CSS/JS + PostgreSQL** .
 
 **Primeiro teste**
 
-* [ ] 1.1 Registrar novo prontuário
+* [X] 1.1 Registrar novo prontuário
 * [ ] 1.2 Acessar o prontuário criado
-* [ ] 1.3 Alterar **nome** e **profissão**
+* [X] 1.3 Alterar **nome** e **profissão**
 
 **Segundo teste**
 
-* [ ] 2.1 Cadastrar convênio fictício
-* [ ] 2.2 Atualizar prontuário para usar esse convênio
+* [X] 2.1 Cadastrar convênio fictício
+* [X] 2.2 Atualizar prontuário para usar esse convênio
 
 **Terceiro teste**
 
-* [ ] 3.1 Criar agendamento para um paciente
-* [ ] 3.2 Remarcar para o mês seguinte (data/hora)
-* [ ] 3.3 Encontrar o agendamento no calendário
+* [X] 3.1 Criar agendamento para um paciente
+* [X] 3.2 Remarcar para o mês seguinte (data/hora)
+* [X] 3.3 Encontrar o agendamento no calendário
 
 ---
 
