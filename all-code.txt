@@ -1,7 +1,7 @@
 # Sources export for GPT
-# generated_at: 2025-11-08T15:04:18
-# roots: ., ./src, ./public
-# patterns: *.js, *.html, *.css, *.json, README.md
+# generated_at: 2025-11-10T12:15:43
+# roots: ., ./src, ./public, .env.example
+# patterns: *.js, *.html, *.css, *.json, README.md, env.example
 # excluded_dirs: .cache, .git, .hg, .idea, .mypy_cache, .svn, .terraform, .venv, .vscode, __pycache__, bazel-bin, bazel-out, bazel-testlogs, build, dist, env, node_modules, out, package-lockJSON, target, vendor, venv
 
 
@@ -27,7 +27,7 @@
 ```
 
 ===== FILE: public/agenda-day.html =====
-# size: 15026 bytes
+# size: 14348 bytes
 ```HTML
 <!doctype html>
 <html lang="pt-br">
@@ -51,7 +51,8 @@
     .stack { position:relative; display:inline-block; }
     .chip { font-size:12px; background:#e0f2fe; color:#0b3a67; padding:2px 8px; border-radius:999px; }
     /* link do paciente */
-    .plink { color:#0b3a67; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+    .plink { color:#0b3a67; font-weight:500; text-decoration:none; }
+    .container { padding: 0 20px; }
   </style>
 </head>
 <body>
@@ -69,56 +70,385 @@
     </div>
   </header>
 
-  <div class="container">
-    <h1>Agenda do Dia</h1>
-    <div class="card">
-      <div class="header-actions">
-        <div class="toolbar">
-          <div class="pager">
-            <button id="prevDay" class="pager__btn" title="Dia anterior">‹</button>
-            <span id="dayLabel" class="pager__label">—</span>
-            <button id="nextDay" class="pager__btn" title="Próximo dia">›</button>
-          </div>
+  <div class="main-layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Pacientes do dia</div>
+        <div id="asideList">
+        </div>
+    </aside>
 
+    <div class="container" style="width: 100%; margin: 50px;">
+      <h1>Agenda do Dia</h1>
+      <div class="card">
+        <div class="header-actions">
           <div class="segmented">
             <a href="/agenda-day.html" class="active">DIA</a>
             <a href="/agenda-week.html">SEMANA</a>
           </div>
+
+          <div class="toolbar">
+            <div class="pager">
+              <button id="prevDay" class="pager__btn" title="Dia anterior"><</button>
+              <span id="dayLabel" class="pager__label">—</span>
+              <button id="nextDay" class="pager__btn" title="Próximo dia">></button>
+            </div>
+          </div>
+
+          <div class="primary-actions">
+            <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+          </div>
         </div>
+
+
+          <!-- coluna principal -->          
+            <table class="table table-min mt-12">
+              <thead>
+                <tr>
+                  <th style="width:90px">Hora</th>
+                  <th>Nome do Paciente</th>
+                  <th style="width:160px">Tipo</th>
+                  <th style="width:140px">Valor</th>
+                  <th style="width:90px; text-align:right;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="dayTbody">
+                <tr><td colspan="5" style="color:var(--muted)">Carregando…</td></tr>
+              </tbody>
+            </table>            
+
+      </div>
+    </div>
+
+    <!-- MODAL: Criar/Editar Consulta -->
+    <div class="modal" id="apptModal" aria-hidden="true">
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true">
+        <div class="modal__header">
+          <h2 id="apptTitle">Nova Consulta</h2>
+          <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
+        </div>
+        <form id="apptForm" class="modal__body" autocomplete="off">
+          <div class="form-grid">
+            <div class="form-row">
+              <label>Data</label>
+              <input type="date" name="date" id="f_date" required />
+            </div>
+            <div class="form-row">
+              <label>Hora</label>
+              <input type="time" name="time" id="f_time" required />
+            </div>
+            <div class="form-row col-span-2">
+              <label>Paciente</label>
+              <select name="patient_id" id="f_patient" required></select>
+            </div>
+            <div class="form-row">
+              <label>Tipo</label>
+              <select name="appointment_type" id="f_type" required>
+                <option value="PRIMEIRA_VEZ">Primeira vez</option>
+                <option value="RETORNO">Retorno</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Convênio</label>
+              <select name="insurance_id" id="f_insurance">
+                <option value="">— particular —</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Valor (R$)</label>
+              <input name="value_amount" id="f_value" inputmode="decimal" placeholder="400.00" />
+            </div>
+            <div class="form-row col-span-2">
+              <label>Observações</label>
+              <textarea name="notes" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal__footer">
+            <button class="btn-primary" type="submit" id="saveBtn">Salvar</button>
+            <button class="btn-secondary" type="button" data-close>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- DROPDOWN TEMPLATE (reutilizado em cada linha) -->
+    <div id="rowDropdownTpl" class="dropdown" role="menu" aria-hidden="true">
+      <button type="button" data-action="edit">Editar</button>
+      <button type="button" data-action="delete" style="color:#b91c1c">Excluir</button>
+    </div>
+  </div>
+  <script>
+  // Badge (canto direito da topbar)
+  document.getElementById('todayBadge').textContent =
+    new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  // ===== elementos da navegação por setas =====
+  const dayLabel = document.getElementById('dayLabel');
+  const prevDay  = document.getElementById('prevDay');
+  const nextDay  = document.getElementById('nextDay');
+
+  // ===== elementos da tabela/aside e modal =====
+  const tbody   = document.getElementById('dayTbody');
+  const asideEl = document.getElementById('asideList');
+
+  const modal     = document.getElementById('apptModal');
+  const apptForm  = document.getElementById('apptForm');
+  const apptTitle = document.getElementById('apptTitle');
+  const openBtn   = document.getElementById('openModalBtn');
+
+  const fDate   = document.getElementById('f_date');
+  const fTime   = document.getElementById('f_time');
+  const fPatient= document.getElementById('f_patient');
+  const fIns    = document.getElementById('f_insurance');
+  const fValue  = document.getElementById('f_value');
+
+  // ===== estado =====
+  let editingId = null;
+  let currentDay = new Date();
+  currentDay.setHours(0,0,0,0);
+
+  // ===== helpers =====
+  const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+  const ymd = d => d.toISOString().slice(0,10);
+  const tHHMM = s => new Date(s).toTimeString().slice(0,5);
+  const tipoStr = t => t === 'RETORNO' ? 'Retorno' : 'Primeira Vez';
+
+  function fmtLong(d){
+    return d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  }
+
+  // ===== modal helpers =====
+  function openModal(){
+    document.body.classList.add('modal-open');
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden','false');
+    setTimeout(()=>fDate.focus(),0);
+  }
+  function closeModal(){
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+    apptForm.reset();
+    editingId = null;
+    apptTitle.textContent = 'Nova Consulta';
+  }
+  modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+  window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
+
+  async function loadPatients(){
+    const r = await fetch('/api/patients'); const arr = await r.json();
+    fPatient.innerHTML = arr.map(p=>`<option value="${p.id}">${p.full_name}</option>`).join('');
+  }
+  async function loadInsurances(){
+    const r = await fetch('/api/insurances'); const arr = await r.json();
+    fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+  }
+
+  // ===== renderização =====
+  function rowTpl(a){
+    const valor = (a.value_amount != null) ? BRL.format(Number(a.value_amount)) : '—';
+    return `
+      <tr data-id="${a.id}">
+        <td>${tHHMM(a.starts_at)}</td>
+        <td><a class="plink" href="/patients.html" title="Abrir prontuário">${a.patient_name}</a></td>
+        <td>${tipoStr(a.appointment_type)}</td>
+        <td>${valor}</td>
+        <td style="text-align:right">
+          <span class="stack">
+            <button style="padding:0" class="kebab" data-kebab="${a.id}" aria-haspopup="menu" aria-label="Ações">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="18" r="1.8"></circle></svg>
+            </button>
+          </span>
+        </td>
+      </tr>`;
+  }
+
+  function renderDay(data){
+    if (!Array.isArray(data) || data.length===0){
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhuma consulta neste dia.</td></tr>`;
+      asideEl.innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = data.map(rowTpl).join('');
+    asideEl.innerHTML = data
+      .sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
+      .map(a=>`<div style="justify-content:space-around;padding: 8px 0 ;border-bottom:1px solid var(--border)"><div style="margin:8px 0">${tHHMM(a.starts_at)}</div><strong>${a.patient_name}</strong></div>`)
+      .join('');
+  }
+
+  async function fetchDay(dateStr){
+    const r = await fetch(`/api/appointments/day?date=${(dateStr)}`);
+    return r.json();
+  }
+
+  async function refreshDay(){
+    dayLabel.textContent = fmtLong(currentDay);
+    const data = await fetchDay(ymd(currentDay));
+    renderDay(data);
+  }
+
+  // ===== navegação por setas =====
+  prevDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()-1); refreshDay(); });
+  nextDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()+1); refreshDay(); });
+  window.addEventListener('keydown', e=>{
+    if (e.key === 'ArrowLeft')  prevDay.click();
+    if (e.key === 'ArrowRight') nextDay.click();
+  });
+
+  // ===== Menu kebab por linha =====
+  const dropdownTpl = document.getElementById('rowDropdownTpl');
+  let openedMenu = null, openedId = null;
+
+  function closeMenu(){
+    if (!openedMenu) return;
+    openedMenu.classList.remove('is-open');
+    openedMenu.remove();
+    openedMenu = null; openedId = null;
+  }
+
+  document.addEventListener('click', async (ev)=>{
+    // abrir menu
+    const kb = ev.target.closest('[data-kebab]');
+    if (kb){
+      ev.preventDefault();
+      const id = kb.getAttribute('data-kebab');
+      closeMenu();
+      const menu = dropdownTpl.cloneNode(true);
+      menu.id = ''; menu.style.top='calc(100% + 6px)'; menu.style.right='0';
+      kb.parentElement.appendChild(menu);
+      requestAnimationFrame(()=>menu.classList.add('is-open'));
+      openedMenu = menu; openedId = id;
+      return;
+    }
+    // ações
+    if (ev.target.closest('.dropdown [data-action="edit"]')){ const id = openedId; closeMenu(); openEdit(id); return; }
+    if (ev.target.closest('.dropdown [data-action="delete"]')){ const id = openedId; closeMenu(); onDelete(id); return; }
+    // clique fora
+    if (openedMenu && !ev.target.closest('.dropdown') && !ev.target.closest('[data-kebab]')) closeMenu();
+  });
+
+  // ===== criar / editar / excluir =====
+  document.getElementById('openModalBtn').addEventListener('click', async ()=>{
+    await Promise.all([loadPatients(), loadInsurances()]);
+    fDate.value = ymd(currentDay);
+    const now = new Date(); now.setMinutes(Math.ceil(now.getMinutes()/30)*30,0,0);
+    fTime.value = now.toTimeString().slice(0,5);
+    openModal();
+  });
+
+  async function openEdit(id){
+    const r = await fetch(`/api/appointments/${id}`);
+    if (!r.ok){ alert('Consulta não encontrada'); return; }
+    const a = await r.json();
+    await Promise.all([loadPatients(), loadInsurances()]);
+    editingId = id;
+    apptTitle.textContent = 'Editar Consulta';
+    fDate.value = a.date;
+    fTime.value = a.time;
+    fPatient.value = String(a.patient_id);
+    fIns.value = a.insurance_id ? String(a.insurance_id) : '';
+    document.getElementById('f_type').value = a.appointment_type;
+    fValue.value = (a.value_amount ?? '');
+    apptForm.elements.notes.value = a.notes || '';
+    openModal();
+  }
+
+  apptForm.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData(apptForm);
+    const payload = Object.fromEntries(fd.entries());
+    if (payload.value_amount === '') payload.value_amount = null;
+
+    const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
+    const method = editingId ? 'PUT' : 'POST';
+
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!r.ok){ alert('Erro ao salvar'); return; }
+    closeModal();
+    refreshDay();
+  });
+
+  async function onDelete(id){
+    if (!confirm('Excluir esta consulta?')) return;
+    const r = await fetch(`/api/appointments/${id}`, { method:'DELETE' });
+    if (!r.ok){ alert('Erro ao excluir'); return; }
+    refreshDay();
+  }
+
+  // ===== boot =====
+  (async function init(){
+    const urlDate = new URLSearchParams(location.search).get('date');
+    if (urlDate){ const d = new Date(urlDate); if (!isNaN(d)) currentDay = d; currentDay.setHours(0,0,0,0); }
+    await refreshDay();
+  })();
+</script>
+</body>
+</html>
+
+```
+
+===== FILE: public/agenda-week.html =====
+# size: 10525 bytes
+```HTML
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>HelloDoctor — Agenda (Semana)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .week-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:12px; }
+    .day-col { border:1px solid var(--border); border-radius:8px; background:#fff; padding:10px; min-height:220px; }
+    .day-col h3 { margin:4px 0 8px; font-size:14px; color:#0b3a67; display:flex; justify-content:space-between; }
+    .item { padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#fff; }
+    .t { font-size:12px; color:var(--muted); }
+    .who { font-weight:700; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="logo">H</div>HelloDoctor</div>
+    <nav class="topnav">
+      <a href="/agenda-day.html">Agenda</a>
+      <a href="/patients.html">Prontuários</a>
+      <a href="/insurances.html">Convênios</a>
+      <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
+    </nav>
+    <div class="topbar__right">
+      <span class="badge" id="todayBadge"></span>
+      <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>Agenda da Semana</h1>
+
+    <div class="card">
+      <div class="header-actions">
+        <div class="segmented">
+          <a href="/agenda-day.html">DIA</a>
+          <a href="/agenda-week.html" class="active">SEMANA</a>
+        </div>
+
+        <div class="toolbar">
+          <div class="pager">
+            <button id="prevWeek" class="pager__btn" title="Semana anterior"><</button>
+            <span id="weekLabel" class="pager__label">—</span>
+            <button id="nextWeek" class="pager__btn" title="Próxima semana">></button>
+          </div>
+        </div>
+
         <div class="primary-actions">
           <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
         </div>
       </div>
 
-      <div class="layout">
-        <!-- coluna principal -->
-        <div>
-          <table class="table table-min mt-12">
-            <thead>
-              <tr>
-                <th style="width:90px">Hora</th>
-                <th>Nome do Paciente</th>
-                <th style="width:160px">Tipo</th>
-                <th style="width:140px">Valor</th>
-                <th style="width:90px; text-align:right;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="dayTbody">
-              <tr><td colspan="5" style="color:var(--muted)">Carregando…</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- sidebar: Pacientes do dia -->
-        <aside>
-          <div class="section-title">Pacientes do dia</div>
-          <div id="asideList"></div>
-        </aside>
-      </div>
+      <div id="weekGrid" class="week-grid"></div>
     </div>
   </div>
 
-  <!-- MODAL: Criar/Editar Consulta -->
+  <!-- MODAL (mesmo da tela do dia, reaproveitado) -->
   <div class="modal" id="apptModal" aria-hidden="true">
     <div class="modal__backdrop" data-close></div>
     <div class="modal__dialog" role="dialog" aria-modal="true">
@@ -170,166 +500,143 @@
     </div>
   </div>
 
-  <!-- DROPDOWN TEMPLATE (reutilizado em cada linha) -->
-  <div id="rowDropdownTpl" class="dropdown" role="menu" aria-hidden="true">
-    <button type="button" data-action="edit">Editar</button>
-    <button type="button" data-action="delete" style="color:#b91c1c">Excluir</button>
-  </div>
-
   <script>
-    // ====== Badge de data ======
-    const todayBadge = document.getElementById('todayBadge');
-    todayBadge.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    // Badge
+    document.getElementById('todayBadge').textContent =
+      new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
 
-    // ====== Elements ======
-    const dateInput = document.getElementById('dateInput');
-    const dayForm   = document.getElementById('dayForm');
-    const tbody     = document.getElementById('dayTbody');
-    const asideEl   = document.getElementById('asideList');
+    // ===== Elements
+    const grid = document.getElementById('weekGrid');
+    const weekLabel = document.getElementById('weekLabel');
+    const prevWeek = document.getElementById('prevWeek');
+    const nextWeek = document.getElementById('nextWeek');
 
     const modal     = document.getElementById('apptModal');
     const apptForm  = document.getElementById('apptForm');
     const apptTitle = document.getElementById('apptTitle');
     const openBtn   = document.getElementById('openModalBtn');
 
-    const fDate = document.getElementById('f_date');
-    const fTime = document.getElementById('f_time');
-    const fPatient = document.getElementById('f_patient');
-    const fIns  = document.getElementById('f_insurance');
-    const fValue = document.getElementById('f_value');
+    const fDate   = document.getElementById('f_date');
+    const fTime   = document.getElementById('f_time');
+    const fPatient= document.getElementById('f_patient');
+    const fIns    = document.getElementById('f_insurance');
+    const fValue  = document.getElementById('f_value');
 
     let editingId = null;
-    const todayStr = new Date().toISOString().slice(0,10);
-    dateInput.value = todayStr;
 
-    // ====== Helpers ======
-    const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
-    function tHHMM(dt){ return new Date(dt).toTimeString().slice(0,5); }
+    // ===== Helpers
+    const ymd = d => d.toISOString().slice(0,10);
+    function startOfWeek(d){
+      const x = new Date(d);
+      const day = (x.getDay()+6)%7; // segunda=0
+      x.setDate(x.getDate()-day);
+      x.setHours(0,0,0,0);
+      return x;
+    }
+    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
+    function fmtRange(a,b){
+      const left  = a.toLocaleDateString('pt-BR', { day:'2-digit', month:'long' });
+      const right = b.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+      return `${left} — ${right}`;
+    }
+    const tHHMM = s => new Date(s).toTimeString().slice(0,5);
 
-    // modal helpers
-    function openModal(){ document.body.classList.add('modal-open'); modal.classList.add('is-open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>fDate.focus(),0); }
-    function closeModal(){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); document.body.classList.remove('modal-open'); apptForm.reset(); editingId=null; apptTitle.textContent='Nova Consulta'; }
+    // âncora: início da semana que estamos visualizando
+    const urlStart = new URLSearchParams(location.search).get('start');
+    let anchor = urlStart ? new Date(urlStart) : new Date();
+    anchor = startOfWeek(anchor);
 
-    // combos
+    // ===== Modal helpers
+    function openModal(){
+      document.body.classList.add('modal-open');
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden','false');
+      setTimeout(()=>fDate.focus(),0);
+    }
+    function closeModal(){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden','true');
+      document.body.classList.remove('modal-open');
+      apptForm.reset();
+      editingId = null;
+      apptTitle.textContent = 'Nova Consulta';
+    }
+    modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+    window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
+
     async function loadPatients(){
-      const r = await fetch('/api/patients');
-      const arr = await r.json();
+      const r = await fetch('/api/patients'); const arr = await r.json();
       fPatient.innerHTML = arr.map(p=>`<option value="${p.id}">${p.full_name}</option>`).join('');
     }
     async function loadInsurances(){
-      const r = await fetch('/api/insurances');
-      const arr = await r.json();
+      const r = await fetch('/api/insurances'); const arr = await r.json();
       fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
     }
 
-    // ====== Render Tabela do Dia ======
-    function rowTpl(a){
-      const hour = tHHMM(a.starts_at);
-      const tipo = (a.appointment_type === 'RETORNO') ? 'Retorno' : 'Primeira Vez';
-      const valor = (a.value_amount != null) ? BRL.format(Number(a.value_amount)) : '—';
-      return `
-        <tr data-id="${a.id}">
-          <td>${hour}</td>
-          <td><a class="plink" href="/patients.html" title="Abrir prontuário">${a.patient_name}</a></td>
-          <td>${tipo}</td>
-          <td>${valor}</td>
-          <td style="text-align:right">
-            <span class="stack">
-              <button style="padding:0" class="kebab" data-kebab="${a.id}" aria-haspopup="menu" aria-label="Ações">
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="18" r="1.8"></circle></svg>
-              </button>
-            </span>
-          </td>
-        </tr>
-      `;
+    // ===== Render week
+    function renderWeek(data, weekStart){
+      // constrói 7 dias (seg..dom)
+      const days = Array.from({length:7}, (_,i)=>{
+        const d = addDays(weekStart, i);
+        return { key: ymd(d), label: d.toLocaleDateString('pt-BR',{ weekday:'short', day:'2-digit' }) };
+      });
+
+      // agrupa por data YYYY-MM-DD (com base em starts_at)
+      const groups = {};
+      (data||[]).forEach(a=>{
+        const k = ymd(new Date(a.starts_at));
+        (groups[k] ||= []).push(a);
+      });
+
+      grid.innerHTML = days.map(d=>{
+        const items = (groups[d.key]||[])
+          .sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
+          .map(a=>{
+            const t = tHHMM(a.starts_at);
+            const ins = a.insurance_name || 'Particular';
+            return `<div class="item">
+                      <div class="who">${a.patient_name}</div>
+                      <div class="t">${t} • ${ins}</div>
+                    </div>`;
+          }).join('');
+        return `<div class="day-col">
+                  <h3><span>${d.label}</span><span></span></h3>
+                  ${items}
+                </div>`;
+      }).join('');
     }
 
-    function renderDay(data){
-      if (!Array.isArray(data) || data.length===0){
-        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhuma consulta neste dia.</td></tr>`;
-      } else {
-        tbody.innerHTML = data.map(rowTpl).join('');
-      }
-      // sidebar
-      asideEl.innerHTML = (data||[]).map(a=>`<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span>${tHHMM(a.starts_at)}</span><strong>${a.patient_name}</strong></div>`).join('');
+    // ===== Fetch + load week
+    async function fetchWeek(startStr){
+      const r = await fetch(`/api/appointments/week?start=${encodeURIComponent(startStr)}`);
+      return r.json();
+    }
+    async function loadWeek(){
+      const start = startOfWeek(anchor);
+      const end   = addDays(start, 6);
+      weekLabel.textContent = fmtRange(start, end);
+      const data = await fetchWeek(ymd(start));
+      renderWeek(data, start);
     }
 
-
-
-    async function loadDay(dateStr){
-      const r = await fetch(`/api/appointments/day?date=${encodeURIComponent(dateStr)}`);
-      const data = await r.json();
-      renderDay(data);
-    }
-
-    // ====== Kebab dropdown por linha ======
-    const dropdownTpl = document.getElementById('rowDropdownTpl');
-    let openedMenu = null, openedId = null;
-
-    function closeMenu(){
-      if (!openedMenu) return;
-      openedMenu.classList.remove('is-open');
-      openedMenu.remove();
-      openedMenu = null;
-      openedId = null;
-    }
-
-    document.addEventListener('click', async (ev)=>{
-      // abrir menu
-      const kb = ev.target.closest('[data-kebab]');
-      if (kb){
-        ev.preventDefault();
-        const id = kb.getAttribute('data-kebab');
-        closeMenu();
-        const menu = dropdownTpl.cloneNode(true);
-        menu.id = ''; menu.style.top='calc(100% + 6px)'; menu.style.right='0';
-        kb.parentElement.appendChild(menu);
-        requestAnimationFrame(()=>menu.classList.add('is-open'));
-        openedMenu = menu; openedId = id;
-        return;
-      }
-
-      // ação do menu
-      if (ev.target.closest('.dropdown [data-action="edit"]')){
-        const id = openedId; closeMenu(); openEdit(id); return;
-      }
-      if (ev.target.closest('.dropdown [data-action="delete"]')){
-        const id = openedId; closeMenu(); onDelete(id); return;
-      }
-
-      // fechar ao clicar fora
-      if (openedMenu && !ev.target.closest('.dropdown') && !ev.target.closest('[data-kebab]')){
-        closeMenu();
-      }
+    // ===== Navegação
+    prevWeek.addEventListener('click', ()=>{ anchor = addDays(anchor, -7); loadWeek(); });
+    nextWeek.addEventListener('click', ()=>{ anchor = addDays(anchor,  7); loadWeek(); });
+    window.addEventListener('keydown', (e)=>{
+      if (e.key === 'ArrowLeft')  prevWeek.click();
+      if (e.key === 'ArrowRight') nextWeek.click();
     });
 
-    // ====== Criar / Editar ======
-    openBtn.addEventListener('click', async ()=>{
+    // ===== Nova consulta (abre modal já com uma data da semana âncora)
+    document.getElementById('openModalBtn').addEventListener('click', async ()=>{
       await Promise.all([loadPatients(), loadInsurances()]);
-      fDate.value = dateInput.value;
+      fDate.value = ymd(anchor); // default: segunda da semana atual
       const now = new Date(); now.setMinutes(Math.ceil(now.getMinutes()/30)*30,0,0);
       fTime.value = now.toTimeString().slice(0,5);
       openModal();
     });
 
-    async function openEdit(id){
-      const r = await fetch(`/api/appointments/${id}`);
-      if (!r.ok){ alert('Consulta não encontrada'); return; }
-      const a = await r.json();
-      await Promise.all([loadPatients(), loadInsurances()]);
-
-      editingId = id;
-      apptTitle.textContent = 'Editar Consulta';
-      fDate.value = a.date;
-      fTime.value = a.time;
-      fPatient.value = String(a.patient_id);
-      fIns.value = a.insurance_id ? String(a.insurance_id) : '';
-      document.getElementById('f_type').value = a.appointment_type;
-      fValue.value = (a.value_amount ?? '');
-      apptForm.elements.notes.value = a.notes || '';
-      openModal();
-    }
-
+    // salvar (criar/editar)
     apptForm.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
       const fd = new FormData(apptForm);
@@ -342,214 +649,11 @@
       const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       if (!r.ok){ alert('Erro ao salvar'); return; }
       closeModal();
-      loadDay(dateInput.value);
-    });
-
-    async function onDelete(id){
-      if (!confirm('Excluir esta consulta?')) return;
-      const r = await fetch(`/api/appointments/${id}`, { method:'DELETE' });
-      if (!r.ok){ alert('Erro ao excluir'); return; }
-      loadDay(dateInput.value);
-    }
-
-    // “Ver dia”
-    dayForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadDay(dateInput.value); });
-
-    // fechar modal
-    modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
-    window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
-
-    // Estado de data atual (ler ?date=YYYY-MM-DD se vier na URL)
-    const urlDate = new URLSearchParams(location.search).get('date');
-    let currentDay = urlDate ? new Date(urlDate) : new Date();
-    currentDay.setHours(0,0,0,0);
-
-    const dayLabel = document.getElementById('dayLabel');
-    const prevDay  = document.getElementById('prevDay');
-    const nextDay  = document.getElementById('nextDay');
-
-    function fmtLong(d){
-      return d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-    }
-    function ymd(d){ return d.toISOString().slice(0,10); }
-
-    async function loadDay(){
-      dayLabel.textContent = fmtLong(currentDay);
-      const r = await fetch('/api/appointments/day?date='+ymd(currentDay));
-      const data = await r.json();
-
-      // TODO: sua renderização existente da tabela/lista do dia
-      // use "data" e não esqueça de também atualizar a sidebar "Pacientes do Dia".
-      renderDayTable(data);
-      renderSidebar(data);
-    }
-
-    prevDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()-1); loadDay(); });
-    nextDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()+1); loadDay(); });
-
-    // atalhos de teclado
-    window.addEventListener('keydown', (e)=>{
-      if (e.key === 'ArrowLeft')  prevDay.click();
-      if (e.key === 'ArrowRight') nextDay.click();
+      loadWeek(); // recarrega a semana
     });
 
     // boot
-    (async function init(){
-      await loadDay(todayStr);
-    })();
-  </script>
-</body>
-</html>
-
-```
-
-===== FILE: public/agenda-week.html =====
-# size: 5868 bytes
-```HTML
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8" />
-  <title>HelloDoctor — Agenda (Semana)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/styles.css" />
-  <style>
-    .week-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:12px; }
-    .day-col { border:1px solid var(--border); border-radius:8px; background:#fff; padding:10px; }
-    .day-col h3 { margin:4px 0 8px; font-size:14px; color:#0b3a67; }
-    .item { padding:8px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
-    .t { font-size:12px; color:var(--muted); }
-    .who { font-weight:700; }
-  </style>
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand"><div class="logo">H</div>HelloDoctor</div>
-    <nav class="topnav">
-      <a href="/agenda-day.html">Agenda</a>
-      <a href="/patients.html">Prontuários</a>
-      <a href="/insurances.html">Convênios</a>
-      <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
-    </nav>
-    <div class="topbar__right">
-      <span class="badge" id="todayBadge"></span>
-      <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
-    </div>
-  </header>
-
-  <div class="container">
-    <h1>Agenda da Semana</h1>
-    <div class="card">
-      <div class="header-actions">
-        <div class="toolbar">
-          <div class="pager">
-            <button id="prevWeek" class="pager__btn" title="Semana anterior">‹</button>
-            <span id="weekLabel" class="pager__label">—</span>
-            <button id="nextWeek" class="pager__btn" title="Próxima semana">›</button>
-          </div>
-
-          <div class="segmented">
-            <a href="/agenda-day.html">DIA</a>
-            <a href="/agenda-week.html" class="active">SEMANA</a>
-          </div>
-        </div>
-      </div>
-      <div class="week-grid" id="weekGrid"></div>
-    </div>
-  </div>
-
-  <script>
-    document.getElementById('todayBadge').textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-
-    const grid = document.getElementById('weekGrid');
-    const startInput = document.getElementById('startInput');
-    const weekForm = document.getElementById('weekForm');
-
-    // encontra segunda-feira da semana atual
-    function mondayISO(d=new Date()){
-      const day = d.getDay(); // 0..6 (dom..sáb)
-      const diff = (day===0 ? -6 : 1 - day); // leva para segunda
-      const m = new Date(d); m.setDate(d.getDate()+diff); m.setHours(0,0,0,0);
-      return m;
-    }
-    const start = mondayISO(); startInput.value = start.toISOString().slice(0,10);
-
-    function byDayKey(dtStr){
-      const d = new Date(dtStr);
-      return d.toISOString().slice(0,10); // YYYY-MM-DD
-    }
-
-    function renderWeek(arr, startDate){
-      // cria 7 colunas
-      const days = [];
-      for(let i=0;i<7;i++){
-        const d = new Date(startDate); d.setDate(d.getDate()+i);
-        days.push({ key: d.toISOString().slice(0,10), label: d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit' }) });
-      }
-      const groups = Object.groupBy(arr, x => byDayKey(x.starts_at));
-
-      grid.innerHTML = days.map(d=>{
-        const items = (groups[d.key]||[]).map(a=>{
-          const t = new Date(a.starts_at).toTimeString().slice(0,5);
-          return `<div class="item"><div class="who">${a.patient_name}</div><div class="t">${t} • ${a.insurance_name || 'Particular'}</div></div>`;
-        }).join('');
-        return `<div class="day-col"><h3>${d.label}</h3>${items || '<div class="t">— sem consultas —</div>'}</div>`;
-      }).join('');
-    }
-
-    async function loadWeek(startStr){
-      const r = await fetch(`/api/appointments/week?start=${encodeURIComponent(startStr)}`);
-      const data = await r.json();
-      renderWeek(data, new Date(startStr));
-    }
-
-    weekForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadWeek(startInput.value); });
-
-    const urlStart = new URLSearchParams(location.search).get('start'); // YYYY-MM-DD opcional
-    let anchor = urlStart ? new Date(urlStart) : new Date();
-    anchor.setHours(0,0,0,0);
-
-    function startOfWeek(d){
-      const x = new Date(d);            // segunda-feira como início
-      const day = (x.getDay()+6)%7;     // 0..6 (segunda=0)
-      x.setDate(x.getDate()-day);
-      x.setHours(0,0,0,0);
-      return x;
-    }
-    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function ymd(d){ return d.toISOString().slice(0,10); }
-    function fmtRange(a,b){
-      const opts = { day:'2-digit', month:'long' };
-      const left  = a.toLocaleDateString('pt-BR', { weekday:'long', ...opts });
-      const right = b.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
-      return `${left} a ${right}`;
-    }
-
-    const prevWeek = document.getElementById('prevWeek');
-    const nextWeek = document.getElementById('nextWeek');
-    const weekLabel = document.getElementById('weekLabel');
-
-    async function loadWeek(){
-      const start = startOfWeek(anchor);
-      const end   = addDays(start, 6);
-      weekLabel.textContent = fmtRange(start, end);
-
-      const r = await fetch('/api/appointments/week?start='+ymd(start));
-      const data = await r.json();
-
-      // TODO: sua renderização existente da grade semanal
-      renderWeekGrid(data, start); // passe o "start" se sua função precisar
-    }
-
-    prevWeek.addEventListener('click', ()=>{ anchor = addDays(anchor, -7); loadWeek(); });
-    nextWeek.addEventListener('click', ()=>{ anchor = addDays(anchor,  7); loadWeek(); });
-
-    window.addEventListener('keydown', (e)=>{
-      if (e.key === 'ArrowLeft')  prevWeek.click();
-      if (e.key === 'ArrowRight') nextWeek.click();
-    });
-
-    loadWeek(startInput.value);
+    loadWeek();
   </script>
 </body>
 </html>
@@ -557,7 +661,7 @@
 ```
 
 ===== FILE: public/insurances.html =====
-# size: 12580 bytes
+# size: 10738 bytes
 ```HTML
 <!doctype html>
 <html lang="pt-br">
@@ -590,9 +694,15 @@
 
     <div class="card">
       <div class="header-actions">
+        <form id="searchForm" class="row" style="flex:1">
+          <input class="w-260" id="q" name="q" placeholder="Digite nome, código ANS, telefone ou e-mail......" />
+          <button class="btn-secondary" type="submit">Buscar</button>
+          <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
+        </form>
+
         <div class="primary-actions">
           <button id="openModalBtn" class="btn-primary">
-            + Cadastrar Novo Convênio
+            + Novo Convênio
           </button>
         </div>
       </div>
@@ -671,234 +781,194 @@
   </div>
 
   <script>
-    let editingId = null;                  // null = criando, número = editando
-    const modalTitle = document.getElementById('modalTitle'); // já existe no header
-    const tbody = document.getElementById('tbody');
-    const todayBadge = document.getElementById('todayBadge');
-    const modal = document.getElementById('insModal');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const createForm = document.getElementById('createForm');
+  // ===== elementos base =====
+  const todayBadge   = document.getElementById('todayBadge');
+  const tbody        = document.getElementById('tbody');
+  const openModalBtn = document.getElementById('openModalBtn');
+  const modal        = document.getElementById('insModal');
+  const modalTitle   = document.getElementById('modalTitle');
+  const createForm   = document.getElementById('createForm');
 
-    // Badge de data (placeholder)
-    const today = new Date();
-    todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  // busca (igual ao padrão de Prontuários)
+  const searchForm = document.getElementById('searchForm');
+  const qInput     = document.getElementById('q');
+  const clearBtn   = document.getElementById('clearBtn');
 
-    function rowTpl(i) {
-      const pay = (i.pay_day ? String(i.pay_day).padStart(2,'0') : '—');
-      return `
-        <tr data-id="${i.id}">
-          <td>${i.id}</td>
-          <td>${i.name}</td>
-          <td>${i.ans_code || '—'}</td>
-          <td>${pay}</td>
-          <td>${i.phone || '—'}</td>
-          <td>${i.email || '—'}</td>
-          <td style="text-align:right;">
-            <div class="kebab-wrap">
-              <button style="padding:0" class="kebab-btn" data-kebab="${i.id}" aria-label="Menu">
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
-              </button>
-              <div class="kebab-pop" id="kebab-${i.id}">
-                <button class="kebab-item" data-action="edit" data-id="${i.id}">Editar</button>
-                <button class="kebab-item danger" data-action="delete" data-id="${i.id}">Excluir</button>
-              </div>
+  // estado
+  let editingId = null;
+
+  // badge de data
+  todayBadge.textContent = new Date().toLocaleDateString(
+    'pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }
+  );
+
+  // ===== render de linha =====
+  function rowTpl(i) {
+    const pay = (i.pay_day ? String(i.pay_day).padStart(2,'0') : '—');
+    return `
+      <tr data-id="${i.id}">
+        <td>${i.id}</td>
+        <td>${i.name}</td>
+        <td>${i.ans_code || '—'}</td>
+        <td>${pay}</td>
+        <td>${i.phone || '—'}</td>
+        <td>${i.email || '—'}</td>
+        <td style="text-align:right;">
+          <div class="kebab-wrap">
+            <button style="padding:0" class="kebab-btn" data-kebab="${i.id}" aria-label="Menu">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/>
+              </svg>
+            </button>
+            <div class="kebab-pop" id="kebab-${i.id}">
+              <button class="kebab-item" data-action="edit" data-id="${i.id}">Editar</button>
+              <button class="kebab-item danger" data-action="delete" data-id="${i.id}">Excluir</button>
             </div>
-          </td>
-        </tr>
-      `;
-    }
+          </div>
+        </td>
+      </tr>
+    `;
+  }
 
-    async function loadList() {
-      try {
-        const r = await fetch('/api/insurances');
-        const data = await r.json();
-        if (!Array.isArray(data) || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum convênio cadastrado.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = data.map(rowTpl).join('');
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" style="color:crimson">Erro ao carregar.</td></tr>`;
-        console.error(e);
+  // ===== listagem com suporte a busca (padrão prontuários) =====
+  async function loadList(q='') {
+    const url = q ? `/api/insurances?q=${encodeURIComponent(q)}` : '/api/insurances';
+    try {
+      const r = await fetch(url);
+      const data = await r.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--muted)">Nenhum convênio encontrado.</td></tr>`;
+        return;
       }
+      tbody.innerHTML = data.map(rowTpl).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="color:crimson">Erro ao carregar.</td></tr>`;
+      console.error(e);
     }
+  }
 
-    // ===== Modal helpers =====
-    function openModal(){
-      document.body.classList.add('modal-open');
-      modal.classList.add('is-open');                  // <-- era 'modal-open'
-      modal.setAttribute('aria-hidden', 'false');
-      setTimeout(() => modal.querySelector('input[name="name"]')?.focus(), 0);
-    }
-    function closeModal(){
-      modal.classList.remove('is-open');               // mantém 'is-open'
-      modal.setAttribute('aria-hidden', 'true');
-      createForm.reset();
-      editingId = null;
-      modalTitle.textContent = 'Novo Convênio';
-      document.body.classList.remove('modal-open');
-    }
+  // ===== modal helpers =====
+  function openModal(){
+    document.body.classList.add('modal-open');
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden','false');
+    setTimeout(()=> modal.querySelector('input[name="name"]')?.focus(), 0);
+  }
+  function closeModal(){
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+    createForm.reset();
+    editingId = null;
+    modalTitle.textContent = 'Novo Convênio';
+  }
+  openModalBtn.addEventListener('click', openModal);
+  modal.addEventListener('click', (e)=>{ if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+  window.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
 
-
-    openModalBtn.addEventListener('click', openModal);
-    modal.addEventListener('click', (e) => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
-    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.classList.contains('is-open')) closeModal(); });
-
-    // Submit do modal
-    createForm.addEventListener('submit', async (ev) => {
+  // ===== submit do modal (criar/editar) =====
+  createForm.addEventListener('submit', async (ev)=>{
     ev.preventDefault();
     const fd = new FormData(createForm);
     const payload = Object.fromEntries(fd.entries());
 
-    // Valida/transforma data: envia apenas o dia do mês (1..31)
+    // converte data para apenas o dia do mês (1..31) se preenchido
     if (payload.pay_day) {
-        const d = new Date(payload.pay_day);
-        if (isNaN(d)) { alert('Data de pagamento inválida'); return; }
-        payload.pay_day = d.getDate();
+      const d = new Date(payload.pay_day);
+      if (isNaN(d)) { alert('Data de pagamento inválida'); return; }
+      payload.pay_day = d.getDate();
     } else {
-        payload.pay_day = null;
+      payload.pay_day = null;
     }
 
     const method = editingId ? 'PUT' : 'POST';
-    const url = editingId ? `/api/insurances/${editingId}` : '/api/insurances';
+    const url    = editingId ? `/api/insurances/${editingId}` : '/api/insurances';
 
-    try {
-      const r = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(()=>({error:'Erro'}));
-        alert(err.error || 'Erro ao salvar');
-        return;
-      }
-      closeModal();
-      editingId = null;
-      modalTitle.textContent = 'Novo Convênio';
-      loadList();
-    } catch (e) {
-        alert('Erro de rede');
+    const r = await fetch(url, {
+      method, headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok){
+      const err = await r.json().catch(()=>({error:'Erro'}));
+      alert(err.error || 'Erro ao salvar');
+      return;
     }
-    });
+    closeModal();
+    loadList(qInput.value.trim());
+  });
 
-    // === toggle abre/fecha dos menus (kebab) ===
-    document.addEventListener('click', (e)=>{
-      // fecha menus se clicar fora
-      if (!e.target.closest('.menu-wrap')) {
-        document.querySelectorAll('.menu-pop.is-open').forEach(el=>el.classList.remove('is-open'));
-        return;
+  // ===== kebab: abrir/fechar =====
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-kebab]');
+    const all = document.querySelectorAll('.kebab-pop');
+    if (btn){
+      const id  = btn.getAttribute('data-kebab');
+      const pop = document.getElementById('kebab-'+id);
+      all.forEach(p => { if (p!==pop) p.classList.remove('open'); });
+      pop.classList.toggle('open');
+      return;
+    }
+    if (!e.target.closest('.kebab-wrap')) all.forEach(p=>p.classList.remove('open'));
+  });
+
+  // ===== ações do kebab (editar/excluir) =====
+  document.addEventListener('click', async (e)=>{
+    const item = e.target.closest('.kebab-item');
+    if (!item) return;
+
+    const action = item.getAttribute('data-action');
+    const id     = item.getAttribute('data-id');
+
+    if (action === 'edit'){
+      const r = await fetch('/api/insurances/'+id);
+      if (!r.ok){ alert('Convênio não encontrado'); return; }
+      const it = await r.json();
+
+      createForm.elements.name.value     = it.name || '';
+      createForm.elements.ans_code.value = it.ans_code || '';
+      if (it.pay_day){
+        const now = new Date(), m = String(now.getMonth()+1).padStart(2,'0');
+        createForm.elements.pay_day.value = `${now.getFullYear()}-${m}-${String(it.pay_day).padStart(2,'0')}`;
+      } else {
+        createForm.elements.pay_day.value = '';
       }
-      // toggle do menu do item clicado
-      const kb = e.target.closest('[data-kebab]');
-      if (kb){
-        const menu = kb.parentElement.querySelector('.menu-pop');
-        document.querySelectorAll('.menu-pop.is-open').forEach(el=>el!==menu && el.classList.remove('is-open'));
-        menu.classList.toggle('is-open');
-      }
-    });
-    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.querySelectorAll('.menu-pop.is-open').forEach(el=>el.classList.remove('is-open')); });
+      createForm.elements.phone.value = it.phone || '';
+      createForm.elements.email.value = it.email || '';
+      createForm.elements.notes.value = it.notes || '';
 
-    // === ações do menu (editar / excluir) ===
-    document.addEventListener('click', async (e)=>{
-      const actBtn = e.target.closest('.menu-pop [data-action]');
-      if(!actBtn) return;
-      const id = actBtn.getAttribute('data-id');
-      const action = actBtn.getAttribute('data-action');
+      editingId = id;
+      modalTitle.textContent = 'Editar Convênio';
+      openModal();
+    }
 
-      if(action==='edit'){
-        const r = await fetch('/api/insurances/'+id);
-        if(!r.ok){ alert('Convênio não encontrado'); return; }
-        const it = await r.json();
+    if (action === 'delete'){
+      if (!confirm('Excluir este convênio?')) return;
+      const r = await fetch('/api/insurances/'+id, { method:'DELETE' });
+      if (!r.ok){ alert('Falha ao excluir'); return; }
+      loadList(qInput.value.trim());
+    }
+  });
 
-        createForm.elements.name.value = it.name || '';
-        createForm.elements.ans_code.value = it.ans_code || '';
-        if (it.pay_day){
-          const now = new Date(); const m = String(now.getMonth()+1).padStart(2,'0');
-          const d = String(it.pay_day).padStart(2,'0');
-          createForm.elements.pay_day.value = `${now.getFullYear()}-${m}-${d}`;
-        } else { createForm.elements.pay_day.value = ''; }
-        createForm.elements.phone.value = it.phone || '';
-        createForm.elements.email.value = it.email || '';
-        createForm.elements.notes.value = it.notes || '';
+  // ===== busca (igual prontoários) =====
+  searchForm.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    loadList(qInput.value.trim());
+  });
+  clearBtn.addEventListener('click', ()=>{
+    qInput.value = '';
+    loadList('');
+  });
 
-        editingId = id;
-        modalTitle.textContent = 'Editar Convênio';
-        openModal();
-      }
-
-      if(action==='delete'){
-        if(!confirm('Excluir este convênio?')) return;
-        const r = await fetch('/api/insurances/'+id, { method:'DELETE' });
-        if(!r.ok){ const er = await r.json().catch(()=>({error:'Erro'})); alert(er.error||'Erro ao excluir'); return; }
-        loadList();
-      }
-    });
-
-    // abre/fecha popover
-    document.addEventListener('click', (e)=>{
-      const btn = e.target.closest('[data-kebab]');
-      const anyPop = document.querySelectorAll('.kebab-pop');
-      if (btn){
-        const id = btn.getAttribute('data-kebab');
-        const pop = document.getElementById('kebab-'+id);
-        // fecha outros
-        anyPop.forEach(p => { if (p!==pop) p.classList.remove('open'); });
-        pop.classList.toggle('open');
-        return;
-      }
-      // clique fora => fecha todos
-      if (!e.target.closest('.kebab-wrap')) anyPop.forEach(p=>p.classList.remove('open'));
-    });
-
-    // ações do popover
-    document.addEventListener('click', async (e)=>{
-      const item = e.target.closest('.kebab-item');
-      if (!item) return;
-      const action = item.getAttribute('data-action');
-      const id = item.getAttribute('data-id');
-
-      if (action === 'edit'){
-        // reaproveita seu fluxo atual de edição
-        const r = await fetch('/api/insurances/'+id);
-        if (!r.ok){ alert('Convênio não encontrado'); return; }
-        const it = await r.json();
-
-        createForm.elements.name.value = it.name || '';
-        createForm.elements.ans_code.value = it.ans_code || '';
-        if (it.pay_day){
-          const now = new Date(), m = String(now.getMonth()+1).padStart(2,'0');
-          createForm.elements.pay_day.value = `${now.getFullYear()}-${m}-${String(it.pay_day).padStart(2,'0')}`;
-        } else {
-          createForm.elements.pay_day.value = '';
-        }
-        createForm.elements.phone.value = it.phone || '';
-        createForm.elements.email.value = it.email || '';
-        createForm.elements.notes.value = it.notes || '';
-
-        editingId = id;
-        modalTitle.textContent = 'Editar Convênio';
-        openModal();
-      }
-
-      if (action === 'delete'){
-        if (!confirm('Excluir este convênio?')) return;
-        const r = await fetch('/api/insurances/'+id, { method:'DELETE' });
-        if (!r.ok){ alert('Falha ao excluir'); return; }
-        loadList();
-      }
-    });
-
-
-    loadList();
-  </script>
+  // boot
+  loadList('');
+</script>
 </body>
 </html>
 
 ```
 
 ===== FILE: public/patients.html =====
-# size: 17255 bytes
+# size: 21914 bytes
 ```HTML
 <!doctype html>
 <html lang="pt-br">
@@ -937,7 +1007,7 @@
           <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
         </form>
         <div class="primary-actions">
-          <button id="openModalBtn" class="btn-primary">+ Cadastrar Novo Prontuário</button>
+          <button id="openModalBtn" class="btn-primary">+ Novo Prontuário</button>
         </div>
       </div>
 
@@ -1040,6 +1110,10 @@
           <input name="address_district" />
         </div>
         <div class="form-row">
+          <label>Cidade</label>
+          <input name="address_" />
+        </div>
+        <div class="form-row">
           <label>Estado</label>
           <input name="address_state" />
         </div>
@@ -1081,8 +1155,39 @@
   </div>
 </div>
 
+<!-- MODAL: Visualizar Prontuário (read-only) -->
+<div class="modal" id="patViewModal" aria-hidden="true">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true">
+    <div class="modal__header">
+      <h2 id="patViewTitle">Prontuário</h2>
+      <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
+    </div>
+    <div class="modal__body">
+      <div class="section-title">Dados Pessoais</div>
+      <div class="form-grid" id="pv-personal"></div>
 
-  <script>
+      <div class="section-title">Convênio</div>
+      <div class="form-grid" id="pv-insurance"></div>
+
+      <div class="section-title">Endereço</div>
+      <div class="form-grid" id="pv-address"></div>
+
+      <div class="section-title">Contato</div>
+      <div class="form-grid" id="pv-contact"></div>
+
+      <div class="section-title">Observações</div>
+      <div id="pv-notes" style="white-space:pre-wrap; border:1px solid var(--border); border-radius:8px; padding:10px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn-secondary" data-close>Fechar</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
   const tbody = document.getElementById('tbody');
   const openModalBtn = document.getElementById('openModalBtn');
   const insSelect = document.getElementById('insSelect');
@@ -1094,11 +1199,41 @@
   const qInput     = document.getElementById('q');
   const clearBtn   = document.getElementById('clearBtn');
 
+  // —— View modal refs
+  const patViewModal = document.getElementById('patViewModal');
+  const patViewTitle = document.getElementById('patViewTitle');
+  const pvPersonal   = document.getElementById('pv-personal');
+  const pvInsurance  = document.getElementById('pv-insurance');
+  const pvAddress    = document.getElementById('pv-address');
+  const pvContact    = document.getElementById('pv-contact');
+  const pvNotes      = document.getElementById('pv-notes');
+
+  function openPatView(){ 
+    document.body.classList.add('modal-open');
+    patViewModal.classList.add('is-open'); 
+    patViewModal.setAttribute('aria-hidden','false');
+  }
+  function closePatView(){ 
+    patViewModal.classList.remove('is-open'); 
+    patViewModal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+  }
+
+  // cria um “campo” readonly (label + valor)
+  function viewField(label, value){
+    return `
+      <div class="form-row">
+        <label>${label}</label>
+        <div>${(value ?? '—')}</div>
+      </div>
+    `;
+  }
+
   let editingId = null;
 
   // Badge de data (placeholder)
-    const today = new Date();
-    todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  const today = new Date();
+  todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
 
   function openPatModal(){
     document.body.classList.add('modal-open');
@@ -1135,7 +1270,7 @@
     if (e.key==='Escape' && patModal.classList.contains('is-open')) closePatModal();
   });
 
-  
+
 
   // Criar/Editar
   patientForm.addEventListener('submit', async (ev)=>{
@@ -1159,11 +1294,24 @@
     loadList(qInput.value.trim());
   });
 
+  // View
+  patViewModal.addEventListener('click', e => {
+  if (e.target.matches('[data-close], .modal__backdrop')) closePatView();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key==='Escape' && patViewModal.classList.contains('is-open')) closePatView();
+  });
+
+
   function rowTpl(p){
     return `
       <tr data-id="${p.id}">
         <td>${p.id}</td>
-        <td>${p.full_name}</td>
+        <td>
+          <a href="#" class="pat-view" data-id="${p.id}" style="color:#0b3a67; text-decoration:none;">
+            ${p.full_name}
+          </a>
+        </td>
         <td>${p.phone_mobile || '—'}</td>
         <td>${p.cpf || '—'}</td>
         <td style="text-align:right">
@@ -1172,6 +1320,7 @@
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
             </button>
             <div class="kebab-pop" id="kebab-${p.id}">
+              <button class="kebab-item" data-action="view" data-id="${p.id}">Visualizar</button>
               <button class="kebab-item" data-action="edit" data-id="${p.id}">Editar</button>
               <button class="kebab-item small" data-action="print" data-id="${p.id}">Imprimir</button>
               <button class="kebab-item danger" data-action="delete" data-id="${p.id}">Excluir</button>
@@ -1199,6 +1348,50 @@
     }
     tbody.innerHTML = data.map(rowTpl).join('');
   }
+
+  async function viewPatient(id){
+    const r = await fetch('/api/patients/'+id);
+    if (!r.ok){ alert('Paciente não encontrado'); return; }
+    const p = await r.json();
+
+    // título
+    patViewTitle.textContent = `Prontuário #${p.id} — ${p.full_name || ''}`;
+
+    // blocos
+    pvPersonal.innerHTML = 
+        viewField('Nome completo', p.full_name)
+      + viewField('Nome social', p.social_name)
+      + viewField('Gênero', p.gender)
+      + viewField('Data de nascimento', p.birth_date ? String(p.birth_date).slice(0,10) : '—')
+      + viewField('Profissão', p.profession)
+      + viewField('Estado civil', p.marital_status)
+      + viewField('Nacionalidade', p.nationality)
+      + viewField('CPF', p.cpf);
+
+    pvInsurance.innerHTML =
+        viewField('Convênio (ID)', p.insurance_id || '—')
+      + viewField('Carteirinha', p.insurance_card || '—');
+
+    pvAddress.innerHTML =
+        viewField('CEP', p.cep)
+      + viewField('Logradouro', p.address_street)
+      + viewField('Número', p.address_number)
+      + viewField('Complemento', p.address_comp)
+      + viewField('Bairro', p.address_district)
+      + viewField('Cidade', p.address_city)
+      + viewField('Estado', p.address_state)
+      + viewField('País', p.address_country);
+
+    pvContact.innerHTML =
+        viewField('E-mail', p.email)
+      + viewField('Celular/WhatsApp', p.phone_mobile)
+      + viewField('Telefone fixo', p.phone_landline);
+
+    pvNotes.textContent = p.notes || '—';
+
+    openPatView();
+  }
+
 
   // Busca
   searchForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadList(qInput.value.trim()); });
@@ -1270,6 +1463,11 @@
       if(!r.ok){ const er = await r.json().catch(()=>({error:'Erro'})); alert(er.error||'Erro ao excluir'); return; }
       loadList(qInput.value.trim());
     }
+
+    if(action==='view'){
+      viewPatient(id);
+      return;
+    }
   });
 
   // abre/fecha popover
@@ -1285,6 +1483,16 @@
     }
     if (!e.target.closest('.kebab-wrap')) anyPop.forEach(p=>p.classList.remove('open'));
   });
+
+  // clicar no nome abre o modal de visualização
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a.pat-view');
+    if (!a) return;
+    e.preventDefault();
+    const id = a.getAttribute('data-id');
+    viewPatient(id);
+  });
+
 
   // ações do popover
   document.addEventListener('click', async (e)=>{
@@ -1382,7 +1590,7 @@
 ```
 
 ===== FILE: public/styles.css =====
-# size: 8452 bytes
+# size: 11119 bytes
 ```CSS
 /* ====== Base / Tokens ====== */
 :root{
@@ -1436,7 +1644,7 @@ body{
 }
 .topnav a{
   color:#dbeafe; text-decoration:none; padding:8px 12px; border-radius:8px;
-  font-weight:600; font-size:14px;
+  font-weight:600; font-size:16px;
 }
 .topnav a.active{
   background:#e0f2fe; color:#0b3a67;
@@ -1447,7 +1655,7 @@ body{
 }
 
 /* ====== Container ====== */
-.container{ max-width:1200px; margin: 20px auto; padding: 0 20px; }
+.container{ max-width:1200px; margin: 50px auto ; padding: 0 50px; }
 .card{
   background: var(--surface);
   border:1px solid var(--border);
@@ -1457,7 +1665,7 @@ body{
 }
 
 /* ====== Headings ====== */
-h1{ font-size:28px; margin: 8px 0 16px; }
+h1{ letter-spacing: -1px; }
 .section-title{
   font-size:16px; font-weight:700; color:#0b3a67; display:flex; align-items:center; gap:8px;
   margin: 24px 0 12px;
@@ -1473,7 +1681,7 @@ input, select, button, textarea{
   background:#fff;
   padding:10px 12px;
   border-radius:8px;
-  font-size:14px;
+  font-size:16px;
   outline:none;
 }
 input:focus, select:focus, textarea:focus{ border-color:#93c5fd; box-shadow:0 0 0 3px #dbeafe; }
@@ -1491,14 +1699,14 @@ button:hover{ background: var(--primary-700); }
   width:100%; border-collapse: collapse; 
   border:1px solid var(--border); border-radius: var(--radius); background:#fff; box-shadow: var(--shadow);
 }
-.table th, .table td{ padding:12px; border-bottom:1px solid var(--border); font-size:14px; }
+.table th, .table td{ padding:12px; border-bottom:1px solid var(--border); font-size:16px; font-weight: 500; }
 .table thead th{
   background:#e6f0f9; color:#0b3a67; text-align:left; font-weight:800;
 }
 .table tbody tr:hover{ background:#f9fbff; }
 
 /* ====== Page header actions ====== */
-.header-actions{ display:flex; justify-content:space-between; align-items:center; margin: 10px 0 16px; }
+.header-actions{ display:flex; justify-content:space-between; align-items:center; margin: 10px 0 16px; gap:50px; }
 .primary-actions{ display:flex; gap:8px; }
 
 /* Helpers */
@@ -1509,8 +1717,8 @@ button:hover{ background: var(--primary-700); }
 .w-140{ width:140px }
 
 /* ===== Buttons refinados ===== */
-.btn-primary{ background: var(--primary); color:#fff; font-weight:700; padding:10px 14px; border-radius:5px; border:none; cursor:pointer; }
-.btn-primary:hover{ background: var(--primary-700); }
+.btn-primary{ background: #0e80c9; color:#fff; font-weight:700; padding:10px 14px; border-radius:5px; border:none; cursor:pointer; }
+.btn-primary:hover{ background: #0c6ca9; }
 .btn-secondary{ background:#eef2f7; color:#0b3a67; font-weight:700; padding:10px 14px; border-radius:10px; border:1px solid var(--border); cursor:pointer; }
 .btn-secondary:hover{ background:#e6edf6; }
 
@@ -1535,9 +1743,9 @@ button:hover{ background: var(--primary-700); }
 }
 .modal__body{ padding: 16px 18px; }
 .modal__footer{ display:flex; gap:10px; justify-content:flex-start; }
-.form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+.form-grid{ display:grid; grid-template-columns: 2fr 1fr; gap:14px; }
 .form-row{ display:flex; flex-direction:column; gap:6px; }
-.form-row label{ font-size:13px; color:#0b3a67; font-weight:700; }
+.form-row label{  color:#0b3a67; font-weight:700; }
 @media (max-width: 640px){
   .form-grid{ grid-template-columns: 1fr; }
 }
@@ -1576,7 +1784,7 @@ button:hover{ background: var(--primary-700); }
   background: #fff;
   z-index: 2;
   border-top: 1px solid var(--border);
-  padding: 18px 0;
+  padding: 18px;
 }
 
 /* evita rolagem do fundo quando o modal estiver aberto */
@@ -1631,18 +1839,158 @@ body.modal-open{ overflow: hidden; }
 .toolbar{ display:flex; justify-content:space-between; align-items:center; margin:10px 0 16px; }
 .pager{ display:flex; align-items:center; gap:10px; }
 .pager__btn{
-  width:34px; height:34px; border-radius:999px; border:1px solid var(--border);
-  background:#fff; font-weight:800; cursor:pointer;
+  width:34px; height:34px;background-color:#fff; color: #0b3a67; font-weight:800; cursor:pointer;
 }
 .pager__btn:hover{ background:#f5f8ff; border-color:#cfe0ff; }
 .pager__label{
-  padding:8px 14px; border:1px solid var(--border); border-radius:999px;
-  background:#f8fafc; color:#0b3a67; font-weight:700;
+  padding:8px 14px; border:1px solid var(--border); border-radius:15px;
+  background:#f8fafc; color:var(--brand); font-weight:600;
 }
 
-.segmented{ display:flex; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.segmented{ display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; }
 .segmented a{ padding:8px 14px; text-decoration:none; color:#6b7280; background:#fff; }
-.segmented a.active{ background:#38bdf8; color:#fff; font-weight:800; }
+.segmented a.active{ background:#0e80c9; color:#fff; font-weight:600; }
+
+
+/*
+ * Novos estilos para as páginas da Agenda
+ */
+.main-layout{
+ display: flex;
+ min-height: calc(100vh - 64px); /* Altura da tela menos o topbar */
+}
+.sidebar{
+ width: 25vw;
+ background: #f2f7fa;
+ border-right: 1px solid var(--border);
+ padding: 20px 16px;
+ flex-shrink: 0;
+}
+.sidebar-title{
+ font-size: 22px;
+ color: var(--brand);
+ font-weight: 700;
+ padding:10px;
+ border-bottom: 1px solid #e2e8f0;
+}
+.sidebar-item{
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ padding: 8px 0;
+ border-bottom: 1px dashed #e2e8f0;
+}
+.sidebar-item .time{
+ font-weight: 700;
+ color: var(--brand);
+ width: 45px;
+ flex-shrink: 0;
+}
+.sidebar-item .name{
+ font-size: 14px;
+}
+.container-agenda{
+ flex-grow: 1;
+ padding: 20px;
+ max-width: 100%;
+}
+
+/* Agenda Actions */
+.agenda-actions{
+ display: flex;
+ justify-content: space-evenly;
+ align-items: center;
+ border-bottom: 1px solid var(--border);
+ padding-bottom: 12px;
+}
+.date-nav{
+ display: flex;
+ align-items: center;
+ gap: 15px;
+ font-size: 18px;
+ font-weight: 700;
+ color: var(--brand);
+}
+.action-group .btn-secondary,
+.action-group .btn-primary{
+ padding: 6px 10px;
+ font-size: 13px;
+ border-radius: 6px;
+}
+
+/* Tabela Agenda */
+.clickable-row:hover{
+ cursor: pointer;
+ background: #f0f7ff !important;
+}
+
+/* Estilos para o Modal de 3 colunas */
+.modal__dialog{ max-width: 780px; }
+.form-grid{ grid-template-columns: repeat(2, 1fr); }
+.form-row.col-span-2{ grid-column: span 2; }
+.form-row.col-span-3{ grid-column: span 3; }
+.patient-link{ color: var(--primary); text-decoration: none; }
+.patient-link:hover{ text-decoration: none; }
+
+/* Agenda Semanal (Gráfico) */
+.weekly-schedule{
+ display: flex;
+ border: 1px solid var(--border);
+ border-radius: var(--radius);
+ overflow: hidden;
+ background: var(--surface);
+}
+.time-column{
+ width: 80px;
+ flex-shrink: 0;
+ border-right: 1px solid var(--border);
+}
+.time-slot, .day-header{
+ height: 45px; /* 30 min por slot */
+ line-height: 45px;
+ padding-left: 10px;
+ font-size: 14px;
+ font-weight: 600;
+ color: var(--muted);
+ border-bottom: 1px solid var(--border);
+}
+.days-container{
+ flex-grow: 1;
+ display: flex;
+}
+.day-column{
+ flex: 1;
+ border-right: 1px solid var(--border);
+ position: relative;
+}
+.day-column:last-child{ border-right: none; }
+.day-header{
+ background: #e6f0f9;
+ color: #0b3a67;
+ font-weight: 800;
+ display: flex;
+ justify-content: space-evenly;
+ padding-right: 10px;
+ position: sticky;
+ top: 0;
+ z-index: 1;
+}
+.day-column.today{ background: #fffde7; }
+.appointments-box{
+ position: relative;
+ height: 405px; /* 9 slots * 45px */
+}
+.appointment-block{
+ position: absolute;
+ width: 90%;
+ margin-left: 5%;
+ background: #0d3b66;
+ color: #fff;
+ border-radius: 5px;
+ padding: 5px;
+ font-size: 12px;
+ overflow: hidden;
+}
 
 ```
 
@@ -1674,20 +2022,20 @@ Stack simples: **Node.js + Express + HTML/CSS/JS + PostgreSQL** .
 
 **Primeiro teste**
 
-* [ ] 1.1 Registrar novo prontuário
-* [ ] 1.2 Acessar o prontuário criado
-* [ ] 1.3 Alterar **nome** e **profissão**
+* [X] 1.1 Registrar novo prontuário
+* [X] 1.2 Acessar o prontuário criado
+* [X] 1.3 Alterar **nome** e **profissão**
 
 **Segundo teste**
 
-* [ ] 2.1 Cadastrar convênio fictício
-* [ ] 2.2 Atualizar prontuário para usar esse convênio
+* [X] 2.1 Cadastrar convênio fictício
+* [X] 2.2 Atualizar prontuário para usar esse convênio
 
 **Terceiro teste**
 
-* [ ] 3.1 Criar agendamento para um paciente
-* [ ] 3.2 Remarcar para o mês seguinte (data/hora)
-* [ ] 3.3 Encontrar o agendamento no calendário
+* [X] 3.1 Criar agendamento para um paciente
+* [X] 3.2 Remarcar para o mês seguinte (data/hora)
+* [X] 3.3 Encontrar o agendamento no calendário
 
 ---
 
@@ -2013,7 +2361,7 @@ export default router;
 ```
 
 ===== FILE: src/routes/api/insurances.js =====
-# size: 2591 bytes
+# size: 2593 bytes
 ```javascript
 import { Router } from 'express';
 import { pool } from '../../db.js';
@@ -2093,12 +2441,14 @@ router.delete('/:id', async (req,res)=>{
   res.json({ ok:true });
 });
 
+
+
 export default router;
 
 ```
 
 ===== FILE: src/routes/api/patients.js =====
-# size: 4255 bytes
+# size: 4345 bytes
 ```javascript
 import { Router } from 'express';
 import { pool } from '../../db.js';
@@ -2135,7 +2485,7 @@ router.get('/:id', async (req, res) => {
     `SELECT
        id, full_name, social_name, gender, birth_date, profession, marital_status, nationality,
        cpf, insurance_id, insurance_card,
-       cep, address_street, address_number, address_comp, address_district, address_state, address_country,
+       cep, address_street, address_number, address_comp, address_district, address_city, address_state, address_country,
        email, phone_mobile, phone_landline,
        notes, created_at, updated_at
      FROM patients WHERE id=$1`,
@@ -2154,15 +2504,15 @@ router.post('/', async (req, res) => {
     INSERT INTO patients (
       full_name, social_name, gender, birth_date, profession, marital_status, nationality,
       cpf, insurance_id, insurance_card,
-      cep, address_street, address_number, address_comp, address_district, address_state, address_country,
+      cep, address_street, address_number, address_comp, address_district, address_city, address_state, address_country,
       email, phone_mobile, phone_landline,
       notes
     ) VALUES (
       $1,$2,$3,$4,$5,$6,$7,
       $8,$9,$10,
-      $11,$12,$13,$14,$15,$16,$17,
-      $18,$19,$20,
-      $21
+      $11,$12,$13,$14,$15,$16,$17,$18,
+      $19,$20, $21, 
+      $22
     )
     RETURNING id, full_name, profession, cpf, phone_mobile, insurance_id
   `;
@@ -2170,7 +2520,7 @@ router.post('/', async (req, res) => {
   const params = [
     b.full_name.trim(), n(b.social_name), n(b.gender), n(b.birth_date), n(b.profession), n(b.marital_status), n(b.nationality),
     n(b.cpf), n(b.insurance_id), n(b.insurance_card),
-    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_state), n(b.address_country),
+    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_city), n(b.address_state), n(b.address_country),
     n(b.email), n(b.phone_mobile), n(b.phone_landline),
     n(b.notes),
   ];
@@ -2189,9 +2539,9 @@ router.put('/:id', async (req, res) => {
     UPDATE patients SET
       full_name=$2, social_name=$3, gender=$4, birth_date=$5, profession=$6, marital_status=$7, nationality=$8,
       cpf=$9, insurance_id=$10, insurance_card=$11,
-      cep=$12, address_street=$13, address_number=$14, address_comp=$15, address_district=$16, address_state=$17, address_country=$18,
-      email=$19, phone_mobile=$20, phone_landline=$21,
-      notes=$22, updated_at=NOW()
+      cep=$12, address_street=$13, address_number=$14, address_comp=$15, address_district=$16, address_city=$17, address_state=$18, address_country=$19,
+      email=$20, phone_mobile=$21, phone_landline=$22,
+      notes=$23, updated_at=NOW()
     WHERE id=$1
     RETURNING id, full_name, profession, cpf, phone_mobile, insurance_id
   `;
@@ -2200,7 +2550,7 @@ router.put('/:id', async (req, res) => {
     id,
     b.full_name.trim(), n(b.social_name), n(b.gender), n(b.birth_date), n(b.profession), n(b.marital_status), n(b.nationality),
     n(b.cpf), n(b.insurance_id), n(b.insurance_card),
-    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_state), n(b.address_country),
+    n(b.cep), n(b.address_street), n(b.address_number), n(b.address_comp), n(b.address_district), n(b.address_city), n(b.address_state), n(b.address_country),
     n(b.email), n(b.phone_mobile), n(b.phone_landline),
     n(b.notes),
   ];
