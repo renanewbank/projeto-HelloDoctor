@@ -1,138 +1,267 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-    <meta charset="utf-8" />
-    <title>HelloDoctor — Agenda Semanal</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/styles.css" />
+  <meta charset="utf-8" />
+  <title>HelloDoctor — Agenda (Semana)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .week-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:12px; }
+    .day-col { border:1px solid var(--border); border-radius:8px; background:#fff; padding:10px; min-height:220px; }
+    .day-col h3 { margin:4px 0 8px; font-size:14px; color:#0b3a67; display:flex; justify-content:space-between; }
+    .item { padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#fff; }
+    .t { font-size:12px; color:var(--muted); }
+    .who { font-weight:700; }
+  </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="brand">
-            <div class="logo">H</div>
-            HelloDoctor
+  <header class="topbar">
+    <div class="brand"><div class="logo">H</div>HelloDoctor</div>
+    <nav class="topnav">
+      <a href="/agenda-day.html">Agenda</a>
+      <a href="/patients.html">Prontuários</a>
+      <a href="/insurances.html">Convênios</a>
+      <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
+    </nav>
+    <div class="topbar__right">
+      <span class="badge" id="todayBadge"></span>
+      <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>Agenda da Semana</h1>
+
+    <div class="card">
+      <div class="header-actions">
+        <div class="segmented">
+          <a href="/agenda-day.html">DIA</a>
+          <a href="/agenda-week.html" class="active">SEMANA</a>
         </div>
 
-        <nav class="topnav">
-            <a href="/agenda-day.html" class="active">Agenda</a>
-            <a href="/patients.html">Prontuários</a>
-            <a href="/insurances.html">Convênios</a>
-            <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
-        </nav>
-
-        <div class="topbar__right">
-            <span class="badge" id="todayBadge"></span>
-            <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
+        <div class="toolbar">
+          <div class="pager">
+            <button id="prevWeek" class="pager__btn" title="Semana anterior"><</button>
+            <span id="weekLabel" class="pager__label">—</span>
+            <button id="nextWeek" class="pager__btn" title="Próxima semana">></button>
+          </div>
         </div>
-    </header>
 
-    <div class="container" style="">
-        <h1>Agenda Semanal</h1>
-        <div class="card">
-            <div class="agenda-actions">
-                <div class="segmented">
-                    <a href="/agenda-day.html">DIA</a>
-                    <a href="/agenda-week.html" class="active">SEMANA</a>
-                </div>                
-                <div class="date-nav">
-                    <button class="btn-ghost" id="prevWeekBtn"><</button>
-                    <span id="currentWeekTitle">Carregando semana...</span>
-                    <button class="btn-ghost" id="nextWeekBtn">></button>
-                </div>
-            </div>
-
-            <div class="weekly-schedule">
-                <div class="time-column">
-                    <div class="time-slot">08:00</div>
-                    <div class="time-slot">08:30</div>
-                    <div class="time-slot">09:00</div>
-                    <div class="time-slot">09:30</div>
-                    <div class="time-slot">10:00</div>
-                    <div class="time-slot">10:30</div>
-                    <div class="time-slot">11:00</div>
-                    <div class="time-slot">11:30</div>
-                    <div class="time-slot">12:00</div>
-                    <div class="time-slot">12:30</div>
-                    <div class="time-slot" style="color:var(--muted); font-weight:400; background:#f9fafb;">Almoço</div>
-                    <div class="time-slot">14:00</div>
-                    <div class="time-slot">14:30</div>
-                    <div class="time-slot">15:00</div>
-                    <div class="time-slot">15:30</div>
-                    <div class="time-slot">16:00</div>
-                    <div class="time-slot">16:30</div>
-                    <div class="time-slot">17:00</div>
-                    <div class="time-slot">17:30</div>
-                    <div class="time-slot">18:00</div>
-                    <div class="time-slot">18:30</div>
-                </div>
-                <div id="weekDaysContainer" class="days-container"></div>
-                
-            </div>
+        <div class="primary-actions">
+          <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
         </div>
+      </div>
+
+      <div id="weekGrid" class="week-grid"></div>
     </div>
-    
-    
-    <script src="https://unpkg.com/dayjs@1.11.10/dayjs.min.js"></script>
-    <script src="https://unpkg.com/dayjs@1.11.10/plugin/localizedFormat.js"></script>
-    <script src="https://unpkg.com/dayjs@1.11.10/plugin/isBetween.js"></script>
-    <script src="https://unpkg.com/dayjs@1.11.10/plugin/weekday.js"></script>
-    <script>
-    dayjs.extend(dayjs.plugin.localizedFormat);
-    dayjs.extend(dayjs.plugin.isBetween);
-    dayjs.extend(dayjs.plugin.weekday);
-    </script>
+  </div>
 
-    <script>
-    const todayBadge = document.getElementById('todayBadge');
-    const currentWeekTitle = document.getElementById('currentWeekTitle');
-    const weekDaysContainer = document.getElementById('weekDaysContainer');
-    
-    // Define o início da semana como Domingo (locale 'pt-br' geralmente é Sunday=0)
-    let currentWeekStart = dayjs().startOf('week'); 
-    
-    // Badge de data no header
-    todayBadge.textContent = dayjs().locale('pt-br').format('dddd, DD [de] MMMM [de] YYYY');
-
-
-    function loadWeeklyAgenda() {
-    const weekEnd = currentWeekStart.add(6, 'day');
-    currentWeekTitle.textContent = `${currentWeekStart.format('DD [de] MMMM')} a ${weekEnd.format('DD [de] MMMM')}`;
-
-    let html = '';
-    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-
-    // Gera 7 colunas (Domingo a Sábado)
-    for (let i = 0; i < 7; i++) {
-    const day = currentWeekStart.add(i, 'day');
-    const isToday = day.isSame(dayjs(), 'day');
-    const dayClass = isToday ? 'day-column today' : 'day-column';
-    
-    html += `
-    <div class="${dayClass}">
-    <div class="day-header">
-    <span>${days[i].slice(0,3)}</span>
-    <span class="date">${day.format('DD/MMM')}</span>
+  <!-- MODAL (mesmo da tela do dia, reaproveitado) -->
+  <div class="modal" id="apptModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true">
+      <div class="modal__header">
+        <h2 id="apptTitle">Nova Consulta</h2>
+        <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
+      </div>
+      <form id="apptForm" class="modal__body" autocomplete="off">
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Data</label>
+            <input type="date" name="date" id="f_date" required />
+          </div>
+          <div class="form-row">
+            <label>Hora</label>
+            <input type="time" name="time" id="f_time" required />
+          </div>
+          <div class="form-row col-span-2">
+            <label>Paciente</label>
+            <select name="patient_id" id="f_patient" required></select>
+          </div>
+          <div class="form-row">
+            <label>Tipo</label>
+            <select name="appointment_type" id="f_type" required>
+              <option value="PRIMEIRA_VEZ">Primeira vez</option>
+              <option value="RETORNO">Retorno</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Convênio</label>
+            <select name="insurance_id" id="f_insurance">
+              <option value="">— particular —</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Valor (R$)</label>
+            <input name="value_amount" id="f_value" inputmode="decimal" placeholder="400.00" />
+          </div>
+          <div class="form-row col-span-2">
+            <label>Observações</label>
+            <textarea name="notes" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal__footer">
+          <button class="btn-primary" type="submit" id="saveBtn">Salvar</button>
+          <button class="btn-secondary" type="button" data-close>Cancelar</button>
+        </div>
+      </form>
     </div>
-    <div class="appointments-box" data-date="${day.format('YYYY-MM-DD')}">
-    ${i === 2 ? `<div class="appointment-block" style="top: 45px; height: 45px;">Paciente Teste (08:30)</div>` : ''}
-    </div>
-    </div>
-    `;
+  </div>
+
+  <script>
+    // Badge
+    document.getElementById('todayBadge').textContent =
+      new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+    // ===== Elements
+    const grid = document.getElementById('weekGrid');
+    const weekLabel = document.getElementById('weekLabel');
+    const prevWeek = document.getElementById('prevWeek');
+    const nextWeek = document.getElementById('nextWeek');
+
+    const modal     = document.getElementById('apptModal');
+    const apptForm  = document.getElementById('apptForm');
+    const apptTitle = document.getElementById('apptTitle');
+    const openBtn   = document.getElementById('openModalBtn');
+
+    const fDate   = document.getElementById('f_date');
+    const fTime   = document.getElementById('f_time');
+    const fPatient= document.getElementById('f_patient');
+    const fIns    = document.getElementById('f_insurance');
+    const fValue  = document.getElementById('f_value');
+
+    let editingId = null;
+
+    // ===== Helpers
+    const ymd = d => d.toISOString().slice(0,10);
+    function startOfWeek(d){
+      const x = new Date(d);
+      const day = (x.getDay()+6)%7; // segunda=0
+      x.setDate(x.getDate()-day);
+      x.setHours(0,0,0,0);
+      return x;
     }
-    weekDaysContainer.innerHTML = html;
-    
-    // Navegação na URL
-    const newUrl = `${window.location.pathname}?start=${currentWeekStart.format('YYYY-MM-DD')}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
+    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
+    function fmtRange(a,b){
+      const left  = a.toLocaleDateString('pt-BR', { day:'2-digit', month:'long' });
+      const right = b.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+      return `${left} — ${right}`;
+    }
+    const tHHMM = s => new Date(s).toTimeString().slice(0,5);
+
+    // âncora: início da semana que estamos visualizando
+    const urlStart = new URLSearchParams(location.search).get('start');
+    let anchor = urlStart ? new Date(urlStart) : new Date();
+    anchor = startOfWeek(anchor);
+
+    // ===== Modal helpers
+    function openModal(){
+      document.body.classList.add('modal-open');
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden','false');
+      setTimeout(()=>fDate.focus(),0);
+    }
+    function closeModal(){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden','true');
+      document.body.classList.remove('modal-open');
+      apptForm.reset();
+      editingId = null;
+      apptTitle.textContent = 'Nova Consulta';
+    }
+    modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+    window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
+
+    async function loadPatients(){
+      const r = await fetch('/api/patients'); const arr = await r.json();
+      fPatient.innerHTML = arr.map(p=>`<option value="${p.id}">${p.full_name}</option>`).join('');
+    }
+    async function loadInsurances(){
+      const r = await fetch('/api/insurances'); const arr = await r.json();
+      fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
     }
 
-     // Navegação Semanal
-     document.getElementById('prevWeekBtn').addEventListener('click', () => { currentWeekStart = currentWeekStart.subtract(1, 'week'); loadWeeklyAgenda(); });
-     document.getElementById('nextWeekBtn').addEventListener('click', () => { currentWeekStart = currentWeekStart.add(1, 'week'); loadWeeklyAgenda(); });
+    // ===== Render week
+    function renderWeek(data, weekStart){
+      // constrói 7 dias (seg..dom)
+      const days = Array.from({length:7}, (_,i)=>{
+        const d = addDays(weekStart, i);
+        return { key: ymd(d), label: d.toLocaleDateString('pt-BR',{ weekday:'short', day:'2-digit' }) };
+      });
 
-     // Inicialização
-     loadWeeklyAgenda();
-     </script>
+      // agrupa por data YYYY-MM-DD (com base em starts_at)
+      const groups = {};
+      (data||[]).forEach(a=>{
+        const k = ymd(new Date(a.starts_at));
+        (groups[k] ||= []).push(a);
+      });
 
+      grid.innerHTML = days.map(d=>{
+        const items = (groups[d.key]||[])
+          .sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
+          .map(a=>{
+            const t = tHHMM(a.starts_at);
+            const ins = a.insurance_name || 'Particular';
+            return `<div class="item">
+                      <div class="who">${a.patient_name}</div>
+                      <div class="t">${t} • ${ins}</div>
+                    </div>`;
+          }).join('');
+        return `<div class="day-col">
+                  <h3><span>${d.label}</span><span></span></h3>
+                  ${items}
+                </div>`;
+      }).join('');
+    }
+
+    // ===== Fetch + load week
+    async function fetchWeek(startStr){
+      const r = await fetch(`/api/appointments/week?start=${encodeURIComponent(startStr)}`);
+      return r.json();
+    }
+    async function loadWeek(){
+      const start = startOfWeek(anchor);
+      const end   = addDays(start, 6);
+      weekLabel.textContent = fmtRange(start, end);
+      const data = await fetchWeek(ymd(start));
+      renderWeek(data, start);
+    }
+
+    // ===== Navegação
+    prevWeek.addEventListener('click', ()=>{ anchor = addDays(anchor, -7); loadWeek(); });
+    nextWeek.addEventListener('click', ()=>{ anchor = addDays(anchor,  7); loadWeek(); });
+    window.addEventListener('keydown', (e)=>{
+      if (e.key === 'ArrowLeft')  prevWeek.click();
+      if (e.key === 'ArrowRight') nextWeek.click();
+    });
+
+    // ===== Nova consulta (abre modal já com uma data da semana âncora)
+    document.getElementById('openModalBtn').addEventListener('click', async ()=>{
+      await Promise.all([loadPatients(), loadInsurances()]);
+      fDate.value = ymd(anchor); // default: segunda da semana atual
+      const now = new Date(); now.setMinutes(Math.ceil(now.getMinutes()/30)*30,0,0);
+      fTime.value = now.toTimeString().slice(0,5);
+      openModal();
+    });
+
+    // salvar (criar/editar)
+    apptForm.addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const fd = new FormData(apptForm);
+      const payload = Object.fromEntries(fd.entries());
+      if (payload.value_amount === '') payload.value_amount = null;
+
+      const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      if (!r.ok){ alert('Erro ao salvar'); return; }
+      closeModal();
+      loadWeek(); // recarrega a semana
+    });
+
+    // boot
+    loadWeek();
+  </script>
 </body>
 </html>

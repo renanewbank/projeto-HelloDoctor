@@ -61,7 +61,7 @@ body{
 }
 
 /* ====== Container ====== */
-.container{ max-width:1200px; margin: 50px auto ; padding: 0 20px; }
+.container{ max-width:1200px; margin: 50px auto ; padding: 0 50px; }
 .card{
   background: var(--surface);
   border:1px solid var(--border);
@@ -190,7 +190,7 @@ button:hover{ background: var(--primary-700); }
   background: #fff;
   z-index: 2;
   border-top: 1px solid var(--border);
-  padding: 18px 0;
+  padding: 18px;
 }
 
 /* evita rolagem do fundo quando o modal estiver aberto */

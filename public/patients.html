@@ -183,6 +183,37 @@
   </div>
 </div>
 
+<!-- MODAL: Visualizar Prontuário (read-only) -->
+<div class="modal" id="patViewModal" aria-hidden="true">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true">
+    <div class="modal__header">
+      <h2 id="patViewTitle">Prontuário</h2>
+      <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
+    </div>
+    <div class="modal__body">
+      <div class="section-title">Dados Pessoais</div>
+      <div class="form-grid" id="pv-personal"></div>
+
+      <div class="section-title">Convênio</div>
+      <div class="form-grid" id="pv-insurance"></div>
+
+      <div class="section-title">Endereço</div>
+      <div class="form-grid" id="pv-address"></div>
+
+      <div class="section-title">Contato</div>
+      <div class="form-grid" id="pv-contact"></div>
+
+      <div class="section-title">Observações</div>
+      <div id="pv-notes" style="white-space:pre-wrap; border:1px solid var(--border); border-radius:8px; padding:10px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn-secondary" data-close>Fechar</button>
+    </div>
+  </div>
+</div>
+
+
 
 <script>
   const tbody = document.getElementById('tbody');
@@ -195,6 +226,36 @@
   const searchForm = document.getElementById('searchForm');
   const qInput     = document.getElementById('q');
   const clearBtn   = document.getElementById('clearBtn');
+
+  // —— View modal refs
+  const patViewModal = document.getElementById('patViewModal');
+  const patViewTitle = document.getElementById('patViewTitle');
+  const pvPersonal   = document.getElementById('pv-personal');
+  const pvInsurance  = document.getElementById('pv-insurance');
+  const pvAddress    = document.getElementById('pv-address');
+  const pvContact    = document.getElementById('pv-contact');
+  const pvNotes      = document.getElementById('pv-notes');
+
+  function openPatView(){ 
+    document.body.classList.add('modal-open');
+    patViewModal.classList.add('is-open'); 
+    patViewModal.setAttribute('aria-hidden','false');
+  }
+  function closePatView(){ 
+    patViewModal.classList.remove('is-open'); 
+    patViewModal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+  }
+
+  // cria um “campo” readonly (label + valor)
+  function viewField(label, value){
+    return `
+      <div class="form-row">
+        <label>${label}</label>
+        <div>${(value ?? '—')}</div>
+      </div>
+    `;
+  }
 
   let editingId = null;
 
@@ -261,11 +322,24 @@
     loadList(qInput.value.trim());
   });
 
+  // View
+  patViewModal.addEventListener('click', e => {
+  if (e.target.matches('[data-close], .modal__backdrop')) closePatView();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key==='Escape' && patViewModal.classList.contains('is-open')) closePatView();
+  });
+
+
   function rowTpl(p){
     return `
       <tr data-id="${p.id}">
         <td>${p.id}</td>
-        <td>${p.full_name}</td>
+        <td>
+          <a href="#" class="pat-view" data-id="${p.id}" style="color:#0b3a67; text-decoration:none;">
+            ${p.full_name}
+          </a>
+        </td>
         <td>${p.phone_mobile || '—'}</td>
         <td>${p.cpf || '—'}</td>
         <td style="text-align:right">
@@ -274,6 +348,7 @@
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
             </button>
             <div class="kebab-pop" id="kebab-${p.id}">
+              <button class="kebab-item" data-action="view" data-id="${p.id}">Visualizar</button>
               <button class="kebab-item" data-action="edit" data-id="${p.id}">Editar</button>
               <button class="kebab-item small" data-action="print" data-id="${p.id}">Imprimir</button>
               <button class="kebab-item danger" data-action="delete" data-id="${p.id}">Excluir</button>
@@ -301,6 +376,50 @@
     }
     tbody.innerHTML = data.map(rowTpl).join('');
   }
+
+  async function viewPatient(id){
+    const r = await fetch('/api/patients/'+id);
+    if (!r.ok){ alert('Paciente não encontrado'); return; }
+    const p = await r.json();
+
+    // título
+    patViewTitle.textContent = `Prontuário #${p.id} — ${p.full_name || ''}`;
+
+    // blocos
+    pvPersonal.innerHTML = 
+        viewField('Nome completo', p.full_name)
+      + viewField('Nome social', p.social_name)
+      + viewField('Gênero', p.gender)
+      + viewField('Data de nascimento', p.birth_date ? String(p.birth_date).slice(0,10) : '—')
+      + viewField('Profissão', p.profession)
+      + viewField('Estado civil', p.marital_status)
+      + viewField('Nacionalidade', p.nationality)
+      + viewField('CPF', p.cpf);
+
+    pvInsurance.innerHTML =
+        viewField('Convênio (ID)', p.insurance_id || '—')
+      + viewField('Carteirinha', p.insurance_card || '—');
+
+    pvAddress.innerHTML =
+        viewField('CEP', p.cep)
+      + viewField('Logradouro', p.address_street)
+      + viewField('Número', p.address_number)
+      + viewField('Complemento', p.address_comp)
+      + viewField('Bairro', p.address_district)
+      + viewField('Cidade', p.address_city)
+      + viewField('Estado', p.address_state)
+      + viewField('País', p.address_country);
+
+    pvContact.innerHTML =
+        viewField('E-mail', p.email)
+      + viewField('Celular/WhatsApp', p.phone_mobile)
+      + viewField('Telefone fixo', p.phone_landline);
+
+    pvNotes.textContent = p.notes || '—';
+
+    openPatView();
+  }
+
 
   // Busca
   searchForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadList(qInput.value.trim()); });
@@ -372,6 +491,11 @@
       if(!r.ok){ const er = await r.json().catch(()=>({error:'Erro'})); alert(er.error||'Erro ao excluir'); return; }
       loadList(qInput.value.trim());
     }
+
+    if(action==='view'){
+      viewPatient(id);
+      return;
+    }
   });
 
   // abre/fecha popover
@@ -387,6 +511,16 @@
     }
     if (!e.target.closest('.kebab-wrap')) anyPop.forEach(p=>p.classList.remove('open'));
   });
+
+  // clicar no nome abre o modal de visualização
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a.pat-view');
+    if (!a) return;
+    e.preventDefault();
+    const id = a.getAttribute('data-id');
+    viewPatient(id);
+  });
+
 
   // ações do popover
   document.addEventListener('click', async (e)=>{
