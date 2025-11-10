@@ -24,7 +24,7 @@ Stack simples: **Node.js + Express + HTML/CSS/JS + PostgreSQL** .
 **Primeiro teste**
 
 * [X] 1.1 Registrar novo prontuário
-* [ ] 1.2 Acessar o prontuário criado
+* [X] 1.2 Acessar o prontuário criado
 * [X] 1.3 Alterar **nome** e **profissão**
 
 **Segundo teste**
