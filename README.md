@@ -124,4 +124,3 @@ hellodoctor/
 * Flavia Silva
 * Pamella Lopes
 * Renan Ewbank
-* Renan Ewbakn
