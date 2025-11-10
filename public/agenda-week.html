@@ -16,7 +16,12 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><div class="logo">H</div>HelloDoctor</div>
+    <div class="logo"><img src="./images/ClipboardCheck.png" alt="">
+      <h1>
+        HelloDoctor
+      </h1>
+    </div>  
+  
     <nav class="topnav">
       <a href="/agenda-day.html">Agenda</a>
       <a href="/patients.html">Prontuários</a>
@@ -28,33 +33,40 @@
       <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
     </div>
   </header>
-
-  <div class="container">
-    <h1>Agenda da Semana</h1>
-
-    <div class="card">
-      <div class="header-actions">
-        <div class="segmented">
-          <a href="/agenda-day.html">DIA</a>
-          <a href="/agenda-week.html" class="active">SEMANA</a>
+  <div class="main-layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Pacientes do dia</div>
+        <div id="asideList">
         </div>
+    </aside>
+      <div class="container">
+      <h2>Agenda da Semana</h2>
 
-        <div class="toolbar">
-          <div class="pager">
-            <button id="prevWeek" class="pager__btn" title="Semana anterior"><</button>
-            <span id="weekLabel" class="pager__label">—</span>
-            <button id="nextWeek" class="pager__btn" title="Próxima semana">></button>
+      <div class="card">
+        <div class="header-actions">
+          <div class="segmented">
+            <a href="/agenda-day.html">DIA</a>
+            <a href="/agenda-week.html" class="active">SEMANA</a>
+          </div>
+
+          <div class="toolbar">
+            <div class="pager">
+              <button id="prevWeek" class="pager__btn" title="Semana anterior"><</button>
+              <span id="weekLabel" class="pager__label">—</span>
+              <button id="nextWeek" class="pager__btn" title="Próxima semana">></button>
+            </div>
+          </div>
+
+          <div class="primary-actions">
+            <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
           </div>
         </div>
 
-        <div class="primary-actions">
-          <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
-        </div>
+        <div id="weekGrid" class="week-grid"></div>
       </div>
-
-      <div id="weekGrid" class="week-grid"></div>
     </div>
   </div>
+  
 
   <!-- MODAL (mesmo da tela do dia, reaproveitado) -->
   <div class="modal" id="apptModal" aria-hidden="true">

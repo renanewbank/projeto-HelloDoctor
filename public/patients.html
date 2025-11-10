@@ -8,10 +8,12 @@
 </head>
 <body>
   <header class="topbar">
-     <div class="brand">
-        <div class="logo">H</div>
+     <div class="logo"><img src="./images/ClipboardCheck.png" alt="">
+      <h1>
         HelloDoctor
-    </div>
+      </h1>
+    </div>  
+    
     <nav class="topnav">
       <a href="/agenda-day.html">Agenda</a>
       <a href="/patients.html" class="active">Prontuários</a>
@@ -25,17 +27,22 @@
   </header>
 
   <div class="container">
-    <h1>Prontuários</h1>
+    <h2>Prontuários</h2>
+
+    <div>
+      <h3>Pesquisar paciente</h3>
+    <form id="searchForm" class="row" style="flex:1">
+      <input style="flex:2" id="q" name="q" placeholder="Digite o nome, telefone ou CPF..." />
+      <button class="btn-secondary" type="submit">Buscar</button>
+      <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
+    </form>
+    </div>
+    
 
     <div class="card">
       <div class="header-actions">
-        <form id="searchForm" class="row" style="flex:1">
-          <input class="w-260" id="q" name="q" placeholder="Digite o nome, telefone ou CPF..." />
-          <button class="btn-secondary" type="submit">Buscar</button>
-          <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
-        </form>
         <div class="primary-actions">
-          <button id="openModalBtn" class="btn-primary">+ Novo Prontuário</button>
+          <button id="openModalBtn" class="btn-primary">+ Cadastrar novo prontuário</button>
         </div>
       </div>
 
@@ -595,7 +602,7 @@
           .lbl{ color:#555 }
         </style>
       </head><body>
-        <h1>Prontuário #${p.id}</h1>
+        <h2>Prontuário #${p.id}</h2>
         <div class="row"><span class="lbl">Nome: </span>${p.full_name || ''}</div>
         <div class="row"><span class="lbl">CPF: </span>${p.cpf || ''}</div>
         <div class="row"><span class="lbl">Telefone: </span>${p.phone_mobile || ''}</div>
