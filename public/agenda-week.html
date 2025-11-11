@@ -9,6 +9,7 @@
     .week-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:12px; }
     .day-col { border:1px solid var(--border); border-radius:8px; background:#fff; padding:10px; min-height:220px; }
     .day-col h3 { margin:4px 0 8px; font-size:14px; color:#0b3a67; display:flex; justify-content:space-between; }
+    
     .item { padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#fff; }
     .t { font-size:12px; color:var(--muted); }
     .who { font-weight:700; }
@@ -23,45 +24,42 @@
     </div>  
   
     <nav class="topnav">
-      <a href="/agenda-day.html">Agenda</a>
+      <a href="/agenda-day.html" class="active">Agenda</a>
       <a href="/patients.html">Prontuários</a>
       <a href="/insurances.html">Convênios</a>
       <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
     </nav>
     <div class="topbar__right">
-      <span class="badge" id="todayBadge"></span>
+      <span class="badge float todayBadge"></span>
       <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
     </div>
   </header>
   <div class="main-layout">
     <aside class="sidebar">
+      <span class="badge todayBadge"></span>
       <div class="sidebar-title">Pacientes do dia</div>
         <div id="asideList">
         </div>
     </aside>
       <div class="container">
-      <h2>Agenda da Semana</h2>
-
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom:24px;">
+          <h2>Agenda da Semana</h2>
+          <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+        </div>
       <div class="card">
         <div class="header-actions">
-          <div class="segmented">
-            <a href="/agenda-day.html">DIA</a>
-            <a href="/agenda-week.html" class="active">SEMANA</a>
-          </div>
-
           <div class="toolbar">
-            <div class="pager">
-              <button id="prevWeek" class="pager__btn" title="Semana anterior"><</button>
-              <span id="weekLabel" class="pager__label">—</span>
-              <button id="nextWeek" class="pager__btn" title="Próxima semana">></button>
+            <div class="pager__label">
+              <button id="prevWeek" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Semana anterior"><</button>
+              <span id="weekLabel" class="">—</span>
+              <button id="nextWeek" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próxima semana">></button>
             </div>
           </div>
-
-          <div class="primary-actions">
-            <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+          <div class="segmented">
+            <a href="/agenda-day.html" >DIA</a>
+            <a href="/agenda-week.html" class="active">SEMANA</a>
           </div>
         </div>
-
         <div id="weekGrid" class="week-grid"></div>
       </div>
     </div>
@@ -122,8 +120,11 @@
 
   <script>
     // Badge
-    document.getElementById('todayBadge').textContent =
-      new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    const todayBadge = document.getElementsByClassName('todayBadge');
+    
+    Array.from(todayBadge).map(element => {
+      element.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    }); 
 
     // ===== Elements
     const grid = document.getElementById('weekGrid');
@@ -135,6 +136,7 @@
     const apptForm  = document.getElementById('apptForm');
     const apptTitle = document.getElementById('apptTitle');
     const openBtn   = document.getElementById('openModalBtn');
+    const asideEl = document.getElementById('asideList');
 
     const fDate   = document.getElementById('f_date');
     const fTime   = document.getElementById('f_time');
@@ -143,6 +145,26 @@
     const fValue  = document.getElementById('f_value');
 
     let editingId = null;
+
+    function renderAsideList(data) {
+      // Agrupa por paciente
+      const byPatient = {};
+      (data || []).forEach(a => {
+        if (!byPatient[a.patient_id]) {
+          byPatient[a.patient_id] = { name: a.patient_name, times: [] };
+        }
+        const t = new Date(a.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        byPatient[a.patient_id].times.push(t);
+      });
+
+      // Renderiza lista
+      asideEl.innerHTML = Object.values(byPatient).map(p =>
+        `<div class="sidebar-item">
+          <div class="sidebar-t">${p.times.sort().join(', ')}</div>
+          <div class="sidebar-who">${p.name}</div>
+        </div>`
+      ).join('') || '<div style="color:#888;font-size:13px;">Nenhum paciente agendado nesta semana.</div>';
+    }
 
     // ===== Helpers
     const ymd = d => d.toISOString().slice(0,10);
@@ -237,6 +259,7 @@
       weekLabel.textContent = fmtRange(start, end);
       const data = await fetchWeek(ymd(start));
       renderWeek(data, start);
+      renderAsideList(data); 
     }
 
     // ===== Navegação

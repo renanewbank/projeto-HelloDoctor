@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/styles.css" />
   <style>
+    /* Mantive seu CSS original e adicionei só o necessário para autocomplete */
     .layout { display:grid; grid-template-columns: 1fr 320px; gap:18px; }
     .table-min td, .table-min th { padding:10px 12px; }
     .kebab { width:34px; height:34px; display:grid; place-items:center; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; }
@@ -22,6 +23,15 @@
     /* link do paciente */
     .plink { color:#0b3a67; font-weight:500; text-decoration:none; }
     .container { padding: 0 20px; }
+
+    /* Autocomplete list basic */
+    .ac-list { position:absolute; left:0; right:0; top:calc(100% + 6px); background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); z-index:40; max-height:220px; overflow:auto; display:none; }
+    .ac-item { padding:10px; cursor:pointer; }
+    .ac-item:hover { background:#f1f5f9; }
+    .ac-empty { padding:10px; color:var(--muted); cursor:pointer; }
+    /* small style for Agendar button shown on empty rows */
+    .btn-slot { display:none; }
+    tr[data-empty="true"]:hover .btn-slot { display:inline-block; }
   </style>
 </head>
 <body>
@@ -38,110 +48,112 @@
       <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
     </nav>
     <div class="topbar__right">
-      <span class="badge" id="todayBadge"></span>
+      <span class="badge float todayBadge"></span>
       <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
     </div>
   </header>
 
   <div class="main-layout">
     <aside class="sidebar">
+      <span class="badge todayBadge"></span>
       <div class="sidebar-title">Pacientes do dia</div>
         <div id="asideList">
         </div>
     </aside>
 
-    <div class="container" style="width: 100%; margin: 50px;">
-      <h2>Agenda do Dia</h2>
+    <div class="container" style="width: 100%; margin: 40px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 50px; margin-bottom:24px;">
+        <h2>Agenda do Dia</h2>
+        <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+      </div>
+      
       <div class="card">
         <div class="header-actions">
+          <div class="toolbar">
+            <div class="pager__label">
+              <button id="prevDay" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Dia anterior"><</button>
+              <span id="dayLabel" class="">—</span>
+              <button id="nextDay" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próximo dia">></button>
+            </div>
+          </div>
           <div class="segmented">
             <a href="/agenda-day.html" class="active">DIA</a>
             <a href="/agenda-week.html">SEMANA</a>
           </div>
-
-          <div class="toolbar">
-            <div class="pager">
-              <button id="prevDay" class="pager__btn" title="Dia anterior"><</button>
-              <span id="dayLabel" class="pager__label">—</span>
-              <button id="nextDay" class="pager__btn" title="Próximo dia">></button>
-            </div>
-          </div>
-
-          <div class="primary-actions">
-            <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
-          </div>
         </div>
 
-
-          <!-- coluna principal -->          
-            <table class="table table-min mt-12">
-              <thead>
-                <tr>
-                  <th style="width:90px">Hora</th>
-                  <th>Nome do Paciente</th>
-                  <th style="width:160px">Tipo</th>
-                  <th style="width:140px">Valor</th>
-                  <th style="width:90px; text-align:right;">Ações</th>
-                </tr>
-              </thead>
-              <tbody id="dayTbody">
-                <tr><td colspan="5" style="color:var(--muted)">Carregando…</td></tr>
-              </tbody>
-            </table>            
-
-      </div>
+          <!-- coluna principal -->
+          <table class="table mt-12" aria-label="Agenda do dia">
+            <thead style="text-align: left;">
+            <tr>
+            <th style="width:120px">Hora</th>
+            <th>Nome do Paciente</th>
+            <th style="width:160px">Tipo</th>
+            <th style="width:140px">Valor</th>
+            <th style="width:120px;"></th>
+            </tr>
+            </thead>
+            <tbody id="dayTbody">
+              <tr><td colspan="5" style="color:var(--muted)">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
     </div>
 
     <!-- MODAL: Criar/Editar Consulta -->
     <div class="modal" id="apptModal" aria-hidden="true">
       <div class="modal__backdrop" data-close></div>
-      <div class="modal__dialog" role="dialog" aria-modal="true">
-        <div class="modal__header">
-          <h2 id="apptTitle">Nova Consulta</h2>
-          <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
-        </div>
-        <form id="apptForm" class="modal__body" autocomplete="off">
-          <div class="form-grid">
-            <div class="form-row">
-              <label>Data</label>
-              <input type="date" name="date" id="f_date" required />
-            </div>
-            <div class="form-row">
-              <label>Hora</label>
-              <input type="time" name="time" id="f_time" required />
-            </div>
-            <div class="form-row col-span-2">
-              <label>Paciente</label>
-              <select name="patient_id" id="f_patient" required></select>
-            </div>
-            <div class="form-row">
-              <label>Tipo</label>
-              <select name="appointment_type" id="f_type" required>
+        <div class="modal__dialog" role="dialog" aria-modal="true">
+          <div class="modal__header">
+            <h2 id="apptTitle">Nova Consulta</h2>
+          </div>
+          <form id="apptForm" class="modal__body mt-12" autocomplete="off">
+            <div class="form-grid">
+              <div class="form-row">
+                <label>Tipo de compromisso</label>
+                <select name="appointment_type" id="f_type" required>
                 <option value="PRIMEIRA_VEZ">Primeira vez</option>
                 <option value="RETORNO">Retorno</option>
-              </select>
-            </div>
-            <div class="form-row">
-              <label>Convênio</label>
-              <select name="insurance_id" id="f_insurance">
+                </select>
+              </div>
+              <div class="form-row">
+                <label>Data</label>
+                <input type="date" name="date" id="f_date" required />
+              </div>
+              <div class="form-row">
+                <label>Hora</label>
+                <input type="time" name="time" id="f_time" required />
+              </div>
+              
+              <div class="form-row col-span-2 autocomplete" style="grid-column: span 3; position:relative;">
+                <label>Paciente</label>
+                <input type="text" id="f_patient_search" placeholder="Digite nome do paciente" autocomplete="off" required />
+                <input type="hidden" name="patient_id" id="f_patient_id" />
+                <div id="acList" class="ac-list" style="display:none"></div>
+              </div>
+              
+              <div class="form-row col-span-2" style="grid-column: span 2; position:relative;">
+                <label>Convênio</label>
+                <select name="insurance_id" id="f_insurance">
                 <option value="">— particular —</option>
-              </select>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label>Valor (R$)</label>
+                <input name="value_amount" id="f_value" inputmode="decimal" placeholder="400.00" />
+              </div>
+              <div class="form-row col-span-3" style="grid-column: span 3;">
+                <label>Observações</label>
+                <textarea name="notes" rows="2"></textarea>
+              </div>
             </div>
-            <div class="form-row">
-              <label>Valor (R$)</label>
-              <input name="value_amount" id="f_value" inputmode="decimal" placeholder="400.00" />
+            <div class="modal__footer">
+              <button style="margin-left:-18px;" class="btn-primary" type="submit" id="saveBtn">Salvar</button>
+              <button class="btn-secondary" type="button" data-close>Cancelar</button>
             </div>
-            <div class="form-row col-span-2">
-              <label>Observações</label>
-              <textarea name="notes" rows="2"></textarea>
-            </div>
-          </div>
-          <div class="modal__footer">
-            <button class="btn-primary" type="submit" id="saveBtn">Salvar</button>
-            <button class="btn-secondary" type="button" data-close>Cancelar</button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </div>
     </div>
 
     <!-- DROPDOWN TEMPLATE (reutilizado em cada linha) -->
@@ -150,210 +162,381 @@
       <button type="button" data-action="delete" style="color:#b91c1c">Excluir</button>
     </div>
   </div>
+
   <script>
-  // Badge (canto direito da topbar)
-  document.getElementById('todayBadge').textContent =
-    new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  // Badge
+    const todayBadge = document.getElementsByClassName('todayBadge');
+    Array.from(todayBadge).map(element => {
+      element.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    });
 
-  // ===== elementos da navegação por setas =====
-  const dayLabel = document.getElementById('dayLabel');
-  const prevDay  = document.getElementById('prevDay');
-  const nextDay  = document.getElementById('nextDay');
+    // elements (kept same ids/classes)
+    const dayLabel = document.getElementById('dayLabel');
+    const prevDay = document.getElementById('prevDay');
+    const nextDay = document.getElementById('nextDay');
+    const tbody = document.getElementById('dayTbody');
+    const asideEl = document.getElementById('asideList');
 
-  // ===== elementos da tabela/aside e modal =====
-  const tbody   = document.getElementById('dayTbody');
-  const asideEl = document.getElementById('asideList');
+    const modal = document.getElementById('apptModal');
+    const apptForm = document.getElementById('apptForm');
+    const apptTitle = document.getElementById('apptTitle');
+    const openBtn = document.getElementById('openModalBtn');
 
-  const modal     = document.getElementById('apptModal');
-  const apptForm  = document.getElementById('apptForm');
-  const apptTitle = document.getElementById('apptTitle');
-  const openBtn   = document.getElementById('openModalBtn');
+    const fDate = document.getElementById('f_date');
+    const fTime = document.getElementById('f_time');
+    const fType = document.getElementById('f_type');
+    const fIns = document.getElementById('f_insurance');
+    const fValue = document.getElementById('f_value');
+    const fPatientSearch = document.getElementById('f_patient_search');
+    const fPatientId = document.getElementById('f_patient_id');
+    const acList = document.getElementById('acList');
 
-  const fDate   = document.getElementById('f_date');
-  const fTime   = document.getElementById('f_time');
-  const fPatient= document.getElementById('f_patient');
-  const fIns    = document.getElementById('f_insurance');
-  const fValue  = document.getElementById('f_value');
+    // state
+    let editingId = null;
+    let currentDay = new Date(); currentDay.setHours(0,0,0,0);
 
-  // ===== estado =====
-  let editingId = null;
-  let currentDay = new Date();
-  currentDay.setHours(0,0,0,0);
+    // helpers
+    const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+    const ymd = d => d.toISOString().slice(0,10);
+    const pad = n => String(n).padStart(2,'0');
 
-  // ===== helpers =====
-  const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
-  const ymd = d => d.toISOString().slice(0,10);
-  const tHHMM = s => new Date(s).toTimeString().slice(0,5);
-  const tipoStr = t => t === 'RETORNO' ? 'Retorno' : 'Primeira Vez';
+    function fmtLong(d){ return d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }
 
-  function fmtLong(d){
-    return d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-  }
-
-  // ===== modal helpers =====
-  function openModal(){
-    document.body.classList.add('modal-open');
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden','false');
-    setTimeout(()=>fDate.focus(),0);
-  }
-  function closeModal(){
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden','true');
-    document.body.classList.remove('modal-open');
-    apptForm.reset();
-    editingId = null;
-    apptTitle.textContent = 'Nova Consulta';
-  }
-  modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
-  window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
-
-  async function loadPatients(){
-    const r = await fetch('/api/patients'); const arr = await r.json();
-    fPatient.innerHTML = arr.map(p=>`<option value="${p.id}">${p.full_name}</option>`).join('');
-  }
-  async function loadInsurances(){
-    const r = await fetch('/api/insurances'); const arr = await r.json();
-    fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
-  }
-
-  // ===== renderização =====
-  function rowTpl(a){
-    const valor = (a.value_amount != null) ? BRL.format(Number(a.value_amount)) : '—';
-    return `
-      <tr data-id="${a.id}">
-        <td>${tHHMM(a.starts_at)}</td>
-        <td><a class="plink" href="/patients.html" title="Abrir prontuário">${a.patient_name}</a></td>
-        <td>${tipoStr(a.appointment_type)}</td>
-        <td>${valor}</td>
-        <td style="text-align:right">
-          <span class="stack">
-            <button style="padding:0" class="kebab" data-kebab="${a.id}" aria-haspopup="menu" aria-label="Ações">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="6" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="18" r="1.8"></circle></svg>
-            </button>
-          </span>
-        </td>
-      </tr>`;
-  }
-
-  function renderDay(data){
-    if (!Array.isArray(data) || data.length===0){
-      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhuma consulta neste dia.</td></tr>`;
-      asideEl.innerHTML = '';
-      return;
+    // generate time slots 08:00..17:30 step 30min (20 slots)
+    function generateSlots(){
+      const s = [];
+      for(let h=8; h<=17; h++){
+        s.push(pad(h)+':00');
+        s.push(pad(h)+':30');
+      }
+      // remove last extra if it created 18:00; we want 08:00..17:30 (20 slots)
+      return s.slice(0,20);
     }
-    tbody.innerHTML = data.map(rowTpl).join('');
-    asideEl.innerHTML = data
-      .sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
-      .map(a=>`<div style="justify-content:space-around;padding: 8px 0 ;border-bottom:1px solid var(--border)"><div style="margin:8px 0">${tHHMM(a.starts_at)}</div><strong>${a.patient_name}</strong></div>`)
-      .join('');
-  }
+    const slots = generateSlots();
 
-  async function fetchDay(dateStr){
-    const r = await fetch(`/api/appointments/day?date=${(dateStr)}`);
-    return r.json();
-  }
+    // build rows from appointments mapped by HH:MM
+    function buildTableRows(appointmentsMap){
+      return slots.map(time => {
+        const appt = appointmentsMap[time];
+        if (!appt){
+          // empty row; data-empty attr used to show Agendar on hover
+          return `
+            <tr data-empty="true" data-time="${time}" data-action="new" style="cursor:pointer;">
+              <td style="font-weight:600">${time}</td>
+              <td class="empty"></td>
+              <td class="empty"></td>
+              <td class="empty"></td>
+              <td><button class="btn-form-actions">Agendar</button></td>
+            </tr>`;
+        }
+        const valor = (appt.value_amount != null && appt.value_amount !== '') ? BRL.format(Number(appt.value_amount)) : '—';
+        // Use same fields that your backend provides
+        const timeDisplay = (appt.starts_at) ? (new Date(appt.starts_at)).toTimeString().slice(0,5) : (appt.time || '');
+        return `
+          <tr style="cursor:pointer;" data-action="open-form" data-id="${appt.id}" data-time="${timeDisplay}">
+            <td style="font-weight:600">${timeDisplay}</td>
+            <td>${appt.patient_name}</td>
+            <td>${appt.appointment_type === 'RETORNO' ? 'Retorno' : 'Primeira vez'}</td>
+            <td>${valor}</td>
+            <td style="text-align:right; ">
+              <div>
+                <img src="./images/EditVector.png" alt="Editar" title="Editar" style="cursor:pointer; width: 18px; margin-bottom: -5px;" data-action="edit" data-id="${appt.id}" />
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
 
-  async function refreshDay(){
-    dayLabel.textContent = fmtLong(currentDay);
-    const data = await fetchDay(ymd(currentDay));
-    renderDay(data);
-  }
+    // fetch appointments for the day
+    async function fetchDay(dateStr){
+      const r = await fetch(`/api/appointments/day?date=${encodeURIComponent(dateStr)}`);
+      if (!r.ok) return [];
+      return r.json();
+    }
 
-  // ===== navegação por setas =====
-  prevDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()-1); refreshDay(); });
-  nextDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()+1); refreshDay(); });
-  window.addEventListener('keydown', e=>{
-    if (e.key === 'ArrowLeft')  prevDay.click();
-    if (e.key === 'ArrowRight') nextDay.click();
-  });
+    async function refreshDay(){
+      dayLabel.textContent = fmtLong(currentDay);
+      const data = await fetchDay(ymd(currentDay));
+      // map appointments by HH:MM (uses starts_at ISO from your API)
+      const map = {};
+      (data || []).forEach(a=>{
+        let time = null;
+        if (a.starts_at){
+          // starts_at is TIMESTAMP without timezone; new Date() will interpret as local — good for display
+          time = (new Date(a.starts_at)).toTimeString().slice(0,5);
+        } else if (a.time) time = a.time;
+        if (time) map[time] = a;
+      });
+      tbody.innerHTML = buildTableRows(map);
 
-  // ===== Menu kebab por linha =====
-  const dropdownTpl = document.getElementById('rowDropdownTpl');
-  let openedMenu = null, openedId = null;
+      asideEl.innerHTML = (data || []).sort((a,b)=>{
+        const ta = a.starts_at ? a.starts_at : (a.time || '');
+        const tb = b.starts_at ? b.starts_at : (b.time || '');
+        return (String(ta)).localeCompare(String(tb));
+      }).map(a=>`<div class="sidebar-item">
+        <div class="sidebar-t">${(a.starts_at? (new Date(a.starts_at)).toTimeString().slice(0,5) : (a.time||''))}
+          </div class="sidebar-who"><strong>${a.patient_name}</strong></div>
+          </div>`).join('') || ' ';
+    }
 
-  function closeMenu(){
-    if (!openedMenu) return;
-    openedMenu.classList.remove('is-open');
-    openedMenu.remove();
-    openedMenu = null; openedId = null;
-  }
+    // modal helpers
+    function openModal(){
+      document.body.classList.add('modal-open');
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden','false');
+      setTimeout(()=>fPatientSearch.focus(),50);
+    }
+    function closeModal(){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden','true');
+      document.body.classList.remove('modal-open');
+      apptForm.reset();
+      fPatientId.value = '';
+      acList.style.display = 'none';
+      editingId = null;
+      apptTitle.textContent = 'Nova Consulta';
+    }
+    modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+    window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
 
-  document.addEventListener('click', async (ev)=>{
-    // abrir menu
-    const kb = ev.target.closest('[data-kebab]');
-    if (kb){
+    // load insurances for select
+    async function loadInsurances(){
+      try{
+        const r = await fetch('/api/insurances');
+        if (!r.ok) return;
+        const arr = await r.json();
+        fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+      }catch(e){ console.warn('loadInsurances',e); }
+    }
+
+    // open new appointment (via empty slot button)
+    document.addEventListener('click', async (ev)=>{
+      const btnNew = ev.target.closest('[data-action="new"]');
+      if (btnNew){
+        const time = btnNew.getAttribute('data-time');
+        editingId = null;
+        apptTitle.textContent = 'Nova Consulta';
+        fDate.value = ymd(currentDay);
+        fTime.value = time;
+        fPatientSearch.value = '';
+        fPatientId.value = '';
+        acList.style.display = 'none';
+        await loadInsurances();
+        openModal();
+        return;
+      }
+
+      const btnEdit = ev.target.closest('[data-action="edit"]');
+      if (btnEdit){
+        const id = btnEdit.getAttribute('data-id');
+        openEdit(id);
+        return;
+      }
+      const btnOpenForm = ev.target.closest('[data-action="open-form"]');
+      if (btnOpenForm){
+        const id = btnOpenForm.getAttribute('data-id');
+        openEdit(id);
+        return;
+      }
+
+      const btnDelete = ev.target.closest('[data-action="delete"]');
+      if (btnDelete){
+        const id = btnDelete.getAttribute('data-id');
+        onDelete(id);
+        return;
+      }
+    });
+
+    // open modal from top button (fields start empty per your instruction)
+    openBtn.addEventListener('click', async ()=>{
+      await loadInsurances();
+      editingId = null;
+      apptTitle.textContent = 'Nova Consulta';
+      // date defaults to currentDay, time left empty per request (all fields init empty)
+      fDate.value = ymd(currentDay);
+      fTime.value = '';
+      fPatientSearch.value = '';
+      fPatientId.value = '';
+      acList.style.display = 'none';
+      openModal();
+    });
+
+    // openEdit - load appointment from API and populate modal
+    async function openEdit(id){
+      const r = await fetch(`/api/appointments/${id}`);
+      if (!r.ok){ alert('Consulta não encontrada'); return; }
+      const a = await r.json();
+      await loadInsurances();
+      editingId = id;
+      apptTitle.textContent = 'Editar Consulta';
+      fDate.value = a.date || '';
+      fTime.value = a.time || '';
+      fPatientSearch.value = a.patient_name || '';
+      fPatientId.value = a.patient_id ? String(a.patient_id) : '';
+      fType.value = a.appointment_type || 'PRIMEIRA_VEZ';
+      fIns.value = a.insurance_id ? String(a.insurance_id) : '';
+      fValue.value = a.value_amount ?? '';
+      apptForm.elements.notes.value = a.notes || '';
+      openModal();
+    }
+
+    // submit form: if no patient_id but name present -> create patient first
+    apptForm.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
-      const id = kb.getAttribute('data-kebab');
-      closeMenu();
-      const menu = dropdownTpl.cloneNode(true);
-      menu.id = ''; menu.style.top='calc(100% + 6px)'; menu.style.right='0';
-      kb.parentElement.appendChild(menu);
-      requestAnimationFrame(()=>menu.classList.add('is-open'));
-      openedMenu = menu; openedId = id;
-      return;
+      const fd = new FormData(apptForm);
+      const payload = Object.fromEntries(fd.entries());
+
+      try{
+        // ensure required patient_id: if missing, create patient
+        if (!payload.patient_id || payload.patient_id === ''){
+          const name = (payload.patient_search || payload[''] || fPatientSearch.value).trim() || fPatientSearch.value.trim();
+          if (!name){
+            alert('Informe o nome do paciente ou selecione um paciente.');
+            return;
+          }
+          // create patient
+          const p = await createPatientByName(name);
+          if (!p || !p.id){ alert('Erro ao criar paciente'); return; }
+          payload.patient_id = p.id;
+        }
+
+        // normalize empty value_amount to null
+        if (payload.value_amount === '') payload.value_amount = null;
+
+        const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
+        const method = editingId ? 'PUT' : 'POST';
+
+        // API expects patient_id, date, time, appointment_type, insurance_id?, notes?, value_amount?
+        const body = {
+          patient_id: payload.patient_id,
+          date: payload.date,
+          time: payload.time,
+          appointment_type: payload.appointment_type,
+          insurance_id: payload.insurance_id || null,
+          notes: payload.notes || null,
+          value_amount: payload.value_amount || null
+        };
+
+        const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if (!r.ok) {
+          const text = await r.text();
+          alert('Erro ao salvar: ' + text);
+          return;
+        }
+
+        // success
+        closeModal();
+        await refreshDay();
+      }catch(err){
+        console.error(err);
+        alert('Erro ao salvar consulta');
+      }
+    });
+
+    // delete
+    async function onDelete(id){
+      if (!confirm('Excluir esta consulta?')) return;
+      const r = await fetch(`/api/appointments/${id}`, { method:'DELETE' });
+      if (!r.ok){ alert('Erro ao excluir'); return; }
+      refreshDay();
     }
-    // ações
-    if (ev.target.closest('.dropdown [data-action="edit"]')){ const id = openedId; closeMenu(); openEdit(id); return; }
-    if (ev.target.closest('.dropdown [data-action="delete"]')){ const id = openedId; closeMenu(); onDelete(id); return; }
-    // clique fora
-    if (openedMenu && !ev.target.closest('.dropdown') && !ev.target.closest('[data-kebab]')) closeMenu();
-  });
 
-  // ===== criar / editar / excluir =====
-  document.getElementById('openModalBtn').addEventListener('click', async ()=>{
-    await Promise.all([loadPatients(), loadInsurances()]);
-    fDate.value = ymd(currentDay);
-    const now = new Date(); now.setMinutes(Math.ceil(now.getMinutes()/30)*30,0,0);
-    fTime.value = now.toTimeString().slice(0,5);
-    openModal();
-  });
+    // create patient by name (POST /api/patients with { full_name })
+    async function createPatientByName(name){
+      try{
+        const r = await fetch('/api/patients', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ full_name: name }) });
+        if (!r.ok){
+          // try to get error text
+          const txt = await r.text();
+          console.warn('createPatient failed', txt);
+          return null;
+        }
+        const p = await r.json();
+        // if API returns only id, optionally fetch patient list to find name — assume it returns { id, full_name }
+        return p;
+      }catch(e){ console.error('createPatientByName', e); return null; }
+    }
 
-  async function openEdit(id){
-    const r = await fetch(`/api/appointments/${id}`);
-    if (!r.ok){ alert('Consulta não encontrada'); return; }
-    const a = await r.json();
-    await Promise.all([loadPatients(), loadInsurances()]);
-    editingId = id;
-    apptTitle.textContent = 'Editar Consulta';
-    fDate.value = a.date;
-    fTime.value = a.time;
-    fPatient.value = String(a.patient_id);
-    fIns.value = a.insurance_id ? String(a.insurance_id) : '';
-    document.getElementById('f_type').value = a.appointment_type;
-    fValue.value = (a.value_amount ?? '');
-    apptForm.elements.notes.value = a.notes || '';
-    openModal();
-  }
+    // ===== autocomplete patient search =====
+    let acTimer = null;
+    async function searchPatients(q){
+      if (!q) return [];
+      // prefer endpoint with search query param
+      const url = `/api/patients?search=${encodeURIComponent(q)}`;
+      try{
+        const r = await fetch(url);
+        if (!r.ok) return [];
+        const arr = await r.json();
+        return arr;
+      }catch(e){ console.warn('searchPatients', e); return []; }
+    }
 
-  apptForm.addEventListener('submit', async (ev)=>{
-    ev.preventDefault();
-    const fd = new FormData(apptForm);
-    const payload = Object.fromEntries(fd.entries());
-    if (payload.value_amount === '') payload.value_amount = null;
+    function renderAcList(items, query){
+      acList.innerHTML = '';
+      if (!items || items.length === 0){
+        const div = document.createElement('div');
+        div.className = 'ac-empty';
+        div.textContent = `Cadastrar "${query}"`;
+        div.addEventListener('click', async ()=>{
+          // create and select
+          const p = await createPatientByName(query);
+          if (p && p.id){
+            selectPatient(p);
+          } else {
+            alert('Erro ao cadastrar paciente');
+          }
+        });
+        acList.appendChild(div);
+      } else {
+        items.forEach(p=>{
+          const div = document.createElement('div');
+          div.className = 'ac-item';
+          div.textContent = p.full_name;
+          div.dataset.id = p.id;
+          div.addEventListener('click', ()=> selectPatient(p));
+          acList.appendChild(div);
+        });
+      }
+      acList.style.display = 'block';
+    }
 
-    const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
-    const method = editingId ? 'PUT' : 'POST';
+    function selectPatient(p){
+      fPatientSearch.value = p.full_name;
+      fPatientId.value = String(p.id);
+      acList.style.display = 'none';
+    }
 
-    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    if (!r.ok){ alert('Erro ao salvar'); return; }
-    closeModal();
-    refreshDay();
-  });
+    fPatientSearch.addEventListener('input', (e)=>{
+      const q = e.target.value.trim();
+      fPatientId.value = '';
+      if (acTimer) clearTimeout(acTimer);
+      acTimer = setTimeout(async ()=>{
+        if (!q){ acList.style.display = 'none'; return; }
+        const res = await searchPatients(q);
+        renderAcList(res, q);
+      }, 300);
+    });
 
-  async function onDelete(id){
-    if (!confirm('Excluir esta consulta?')) return;
-    const r = await fetch(`/api/appointments/${id}`, { method:'DELETE' });
-    if (!r.ok){ alert('Erro ao excluir'); return; }
-    refreshDay();
-  }
+    // close acList clicking outside
+    document.addEventListener('click', (ev)=>{
+      if (!ev.target.closest('.autocomplete')) acList.style.display = 'none';
+    });
 
-  // ===== boot =====
-  (async function init(){
-    const urlDate = new URLSearchParams(location.search).get('date');
-    if (urlDate){ const d = new Date(urlDate); if (!isNaN(d)) currentDay = d; currentDay.setHours(0,0,0,0); }
-    await refreshDay();
-  })();
-</script>
+    // navigation
+    prevDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()-1); refreshDay(); });
+    nextDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()+1); refreshDay(); });
+    window.addEventListener('keydown', e=>{
+      if (e.key === 'ArrowLeft') prevDay.click();
+      if (e.key === 'ArrowRight') nextDay.click();
+    });
+
+    // boot
+    (async function init(){
+      const urlDate = new URLSearchParams(location.search).get('date');
+      if (urlDate){ const d = new Date(urlDate); if (!isNaN(d)) currentDay = d; currentDay.setHours(0,0,0,0); }
+      await loadInsurances();
+      await refreshDay();
+    })();
+  </script>
 </body>
 </html>
