@@ -22,7 +22,6 @@
     .chip { font-size:12px; background:#e0f2fe; color:#0b3a67; padding:2px 8px; border-radius:999px; }
     /* link do paciente */
     .plink { color:#0b3a67; font-weight:500; text-decoration:none; }
-    .container { padding: 0 20px; }
 
     /* Autocomplete list basic */
     .ac-list { position:absolute; left:0; right:0; top:calc(100% + 6px); background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); z-index:40; max-height:220px; overflow:auto; display:none; }
@@ -61,20 +60,20 @@
         </div>
     </aside>
 
-    <div class="container" style="width: 100%; margin: 40px;">
+    <div class="container">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 50px; margin-bottom:24px;">
-        <h2>Agenda do Dia</h2>
+        <h2>Agenda da
+          <span>Dra. Maria Ligia Pereira <img style="cursor: pointer;" src="./images/ChevronDownVector.png" alt=""></span>
+        </h2>
         <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
       </div>
       
       <div class="card">
         <div class="header-actions">
-          <div class="toolbar">
-            <div class="pager__label">
-              <button id="prevDay" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Dia anterior"><</button>
-              <span id="dayLabel" class="">—</span>
-              <button id="nextDay" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próximo dia">></button>
-            </div>
+          <div class="pager__label">
+            <button id="prevDay" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Dia anterior"><</button>
+            <span id="dayLabel" class="">—</span>
+            <button id="nextDay" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próximo dia">></button>
           </div>
           <div class="segmented">
             <a href="/agenda-day.html" class="active">DIA</a>
@@ -254,6 +253,47 @@
       return r.json();
     }
 
+    const renderSidebarItem = (timeText, patientName, patientId) => `
+      <div class="sidebar-item" data-patient-id="${patientId}">
+        <div class="sidebar-t">${timeText}</div>
+        <div class="sidebar-who"><strong>${patientName}</strong></div>
+      </div>
+    `;
+    
+    const emptyMessage = () =>
+  '<div style="color:#888;font-size:13px;">Nenhuma consulta agendada.</div>';
+
+  function renderDailySidebar(data = []) {
+  console.log("Render daily:", data);
+
+  if (!Array.isArray(data)) data = Object.values(data);
+
+  asideEl.innerHTML = data
+    .filter(a => a)
+    .sort((a,b) =>
+      String(a.starts_at || a.time || '').localeCompare(String(b.starts_at || b.time || ''))
+    )
+    .map(appt => renderSidebarItem(getTime(appt), appt.patient_name, appt.id))
+    .join('') || emptyMessage();
+  }
+  const getTime = (appt) => {
+    if (appt.starts_at) {
+      return (new Date(appt.starts_at)).toTimeString().slice(0,5);
+    } else if (appt.time) {
+      return appt.time;
+    }
+    return '';
+  };
+
+
+asideEl.addEventListener('click', e => {
+  const item = e.target.closest('.sidebar-item');
+  if (!item) return;
+
+  const apptId = item.getAttribute('data-appt-id');
+  if (apptId) openAppointmentForm(apptId);
+});
+
     async function refreshDay(){
       dayLabel.textContent = fmtLong(currentDay);
       const data = await fetchDay(ymd(currentDay));
@@ -268,15 +308,8 @@
         if (time) map[time] = a;
       });
       tbody.innerHTML = buildTableRows(map);
-
-      asideEl.innerHTML = (data || []).sort((a,b)=>{
-        const ta = a.starts_at ? a.starts_at : (a.time || '');
-        const tb = b.starts_at ? b.starts_at : (b.time || '');
-        return (String(ta)).localeCompare(String(tb));
-      }).map(a=>`<div class="sidebar-item">
-        <div class="sidebar-t">${(a.starts_at? (new Date(a.starts_at)).toTimeString().slice(0,5) : (a.time||''))}
-          </div class="sidebar-who"><strong>${a.patient_name}</strong></div>
-          </div>`).join('') || ' ';
+      
+  renderDailySidebar(data);
     }
 
     // modal helpers

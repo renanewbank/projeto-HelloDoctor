@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
@@ -6,297 +7,570 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/styles.css" />
   <style>
-    .week-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:12px; }
-    .day-col { border:1px solid var(--border); border-radius:8px; background:#fff; padding:10px; min-height:220px; }
-    .day-col h3 { margin:4px 0 8px; font-size:14px; color:#0b3a67; display:flex; justify-content:space-between; }
-    
-    .item { padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#fff; }
-    .t { font-size:12px; color:var(--muted); }
-    .who { font-weight:700; }
+    .week-toolbar { display:flex; justify-content:space-between; align-items:center; margin-top:40px; margin-bottom:18px; }
+    .calendar-wrap { display:flex; gap:18px; }
+    .week-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; width:100%; box-shadow:var(--shadow); }
+
+    /* grid: left column times, then 7 day columns */
+    .week-grid {
+      display:grid;
+      grid-template-columns: 80px repeat(7, 1fr);
+      gap:0;
+      position:relative;
+      height: calc(40px * 22);
+      border:1px solid var(--border);
+    }
+    .time-column {
+      background:linear-gradient(#fff,#fff);
+      border-right:1px solid var(--border);
+    }
+    .time-slot {
+      height:40px; /* slot height: 30min per slot -> adjust if you change generateHours */
+      padding:6px 8px;
+      font-size:12px;
+      color:var(--muted);
+      border-bottom:1px dashed var(--border);
+    }
+    .day-col {
+      position:relative;
+      border-right:1px solid var(--border);
+    }
+    .day-col:last-child {
+      border-right:none;
+    }
+    .day-col .day-head {
+      height:40px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px;
+      border-bottom:1px solid var(--border);
+      background-color:#e6f0f9;
+      font-weight:600;
+      color:#0b3a67; 
+      text-align:center;
+      text-transform: uppercase;
+    }
+
+    /* appointment box absolute positioned inside day-col */
+    .appt {
+      position:absolute;
+      left:6px;
+      right:6px;
+      background:#e6f0ff;
+      border-radius:8px;
+      padding:6px 8px;
+      box-shadow:0 1px 0 rgba(0,0,0,0.04);
+      cursor:pointer;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      border:1px solid rgba(11,58,103,0.08);
+    }
+    .appt .who { font-size:13px; font-weight:600; color:#0b3a67; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .appt .meta { font-size:12px; color:var(--muted); display:flex; justify-content:space-between; gap:8px; }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <div class="logo"><img src="./images/ClipboardCheck.png" alt="">
-      <h1>
-        HelloDoctor
-      </h1>
-    </div>  
+    <div class="logo"><img src="./images/ClipboardCheck.png" alt=""><h1>HelloDoctor</h1></div>
   
     <nav class="topnav">
-      <a href="/agenda-day.html" class="active">Agenda</a>
+      <a href="/agenda-day.html">Agenda</a>
+      <a href="/agenda-week.html" class="active">Semana</a>
       <a href="/patients.html">Prontuários</a>
       <a href="/insurances.html">Convênios</a>
-      <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
     </nav>
     <div class="topbar__right">
       <span class="badge float todayBadge"></span>
       <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
     </div>
   </header>
+
   <div class="main-layout">
     <aside class="sidebar">
       <span class="badge todayBadge"></span>
-      <div class="sidebar-title">Pacientes do dia</div>
-        <div id="asideList">
-        </div>
+      <div class="sidebar-title">Pacientes da semana</div>
+      <div id="asideList"></div>
     </aside>
-      <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom:24px;">
-          <h2>Agenda da Semana</h2>
-          <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
-        </div>
+
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 50px; margin-bottom:24px;">
+        <h2>Agenda da
+          <span>Dra. Maria Ligia Pereira <img style="cursor: pointer;" src="./images/ChevronDownVector.png" alt=""></span>
+        </h2>
+        <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+      </div>
+
       <div class="card">
         <div class="header-actions">
-          <div class="toolbar">
+          <div style="display: flex; gap:12px; margin-left: -12px;">
+            <button id="todayWeek" class="pager__btn" style="margin-left:12px; border: 2px solid var(--border);">Hoje</button>
             <div class="pager__label">
               <button id="prevWeek" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Semana anterior"><</button>
               <span id="weekLabel" class="">—</span>
               <button id="nextWeek" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próxima semana">></button>
             </div>
+            
           </div>
+            
           <div class="segmented">
             <a href="/agenda-day.html" >DIA</a>
             <a href="/agenda-week.html" class="active">SEMANA</a>
           </div>
         </div>
-        <div id="weekGrid" class="week-grid"></div>
+        
+        <div id="weekGrid" class="week-grid mt-12" role="grid" aria-label="Agenda semanal"></div>
       </div>
     </div>
   </div>
-  
 
-  <!-- MODAL (mesmo da tela do dia, reaproveitado) -->
+  <!-- Reuse your modal markup (same as day view) -->
   <div class="modal" id="apptModal" aria-hidden="true">
     <div class="modal__backdrop" data-close></div>
-    <div class="modal__dialog" role="dialog" aria-modal="true">
-      <div class="modal__header">
-        <h2 id="apptTitle">Nova Consulta</h2>
-        <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
+      <div class="modal__dialog" role="dialog" aria-modal="true">
+        <div class="modal__header">
+          <h2 id="apptTitle">Nova Consulta</h2>
+        </div>
+        <form id="apptForm" class="modal__body mt-12" autocomplete="off">
+          <div class="form-grid">
+            <div class="form-row">
+              <label>Tipo de compromisso</label>
+              <select name="appointment_type" id="f_type" required>
+                <option value="PRIMEIRA_VEZ">Primeira vez</option>
+                <option value="RETORNO">Retorno</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Data</label>
+              <input type="date" name="date" id="f_date" required />
+            </div>
+            <div class="form-row">
+              <label>Hora</label>
+              <input type="time" name="time" id="f_time" required />
+            </div>
+
+            <div class="form-row col-span-2 autocomplete" style="grid-column: span 3; position:relative;">
+              <label>Paciente</label>
+              <input type="text" id="f_patient_search" placeholder="Digite nome do paciente" autocomplete="off" required />
+              <input type="hidden" name="patient_id" id="f_patient_id" />
+              <div id="acList" class="ac-list" style="display:none"></div>
+            </div>
+
+            <div class="form-row col-span-2" style="grid-column: span 2; position:relative;">
+              <label>Convênio</label>
+              <select name="insurance_id" id="f_insurance">
+                <option value="">— particular —</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <label>Valor (R$)</label>
+              <input name="value_amount" id="f_value" inputmode="decimal" placeholder="400.00" />
+            </div>
+            <div class="form-row col-span-3" style="grid-column: span 3;">
+              <label>Observações</label>
+              <textarea name="notes" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal__footer">
+            <button style="margin-left:-18px;" class="btn-primary" type="submit" id="saveBtn">Salvar</button>
+            <button class="btn-secondary" type="button" data-close>Cancelar</button>
+          </div>
+        </form>
       </div>
-      <form id="apptForm" class="modal__body" autocomplete="off">
-        <div class="form-grid">
-          <div class="form-row">
-            <label>Data</label>
-            <input type="date" name="date" id="f_date" required />
-          </div>
-          <div class="form-row">
-            <label>Hora</label>
-            <input type="time" name="time" id="f_time" required />
-          </div>
-          <div class="form-row col-span-2">
-            <label>Paciente</label>
-            <select name="patient_id" id="f_patient" required></select>
-          </div>
-          <div class="form-row">
-            <label>Tipo</label>
-            <select name="appointment_type" id="f_type" required>
-              <option value="PRIMEIRA_VEZ">Primeira vez</option>
-              <option value="RETORNO">Retorno</option>
-            </select>
-          </div>
-          <div class="form-row">
-            <label>Convênio</label>
-            <select name="insurance_id" id="f_insurance">
-              <option value="">— particular —</option>
-            </select>
-          </div>
-          <div class="form-row">
-            <label>Valor (R$)</label>
-            <input name="value_amount" id="f_value" inputmode="decimal" placeholder="400.00" />
-          </div>
-          <div class="form-row col-span-2">
-            <label>Observações</label>
-            <textarea name="notes" rows="2"></textarea>
-          </div>
-        </div>
-        <div class="modal__footer">
-          <button class="btn-primary" type="submit" id="saveBtn">Salvar</button>
-          <button class="btn-secondary" type="button" data-close>Cancelar</button>
-        </div>
-      </form>
-    </div>
   </div>
 
   <script>
-    // Badge
+    // ========== Badge (same as before) ==========
     const todayBadge = document.getElementsByClassName('todayBadge');
-    
     Array.from(todayBadge).map(element => {
       element.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-    }); 
+    });
 
-    // ===== Elements
+    // ====== Elements ======
     const grid = document.getElementById('weekGrid');
     const weekLabel = document.getElementById('weekLabel');
     const prevWeek = document.getElementById('prevWeek');
     const nextWeek = document.getElementById('nextWeek');
-
-    const modal     = document.getElementById('apptModal');
-    const apptForm  = document.getElementById('apptForm');
-    const apptTitle = document.getElementById('apptTitle');
-    const openBtn   = document.getElementById('openModalBtn');
+    const todayWeek = document.getElementById('todayWeek');
     const asideEl = document.getElementById('asideList');
 
-    const fDate   = document.getElementById('f_date');
-    const fTime   = document.getElementById('f_time');
-    const fPatient= document.getElementById('f_patient');
-    const fIns    = document.getElementById('f_insurance');
-    const fValue  = document.getElementById('f_value');
+    const modal = document.getElementById('apptModal');
+    const apptForm = document.getElementById('apptForm');
+    const apptTitle = document.getElementById('apptTitle');
+    const openBtn = document.getElementById('openModalBtn');
 
+    const fDate = document.getElementById('f_date');
+    const fTime = document.getElementById('f_time');
+    const fType = document.getElementById('f_type');
+    const fIns = document.getElementById('f_insurance');
+    const fValue = document.getElementById('f_value');
+    const fPatientSearch = document.getElementById('f_patient_search');
+    const fPatientId = document.getElementById('f_patient_id');
+    const acList = document.getElementById('acList');
+
+    // State
     let editingId = null;
-
-    function renderAsideList(data) {
-      // Agrupa por paciente
-      const byPatient = {};
-      (data || []).forEach(a => {
-        if (!byPatient[a.patient_id]) {
-          byPatient[a.patient_id] = { name: a.patient_name, times: [] };
-        }
-        const t = new Date(a.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        byPatient[a.patient_id].times.push(t);
-      });
-
-      // Renderiza lista
-      asideEl.innerHTML = Object.values(byPatient).map(p =>
-        `<div class="sidebar-item">
-          <div class="sidebar-t">${p.times.sort().join(', ')}</div>
-          <div class="sidebar-who">${p.name}</div>
-        </div>`
-      ).join('') || '<div style="color:#888;font-size:13px;">Nenhum paciente agendado nesta semana.</div>';
-    }
-
-    // ===== Helpers
-    const ymd = d => d.toISOString().slice(0,10);
+    // anchor = start of week Monday
     function startOfWeek(d){
       const x = new Date(d);
-      const day = (x.getDay()+6)%7; // segunda=0
-      x.setDate(x.getDate()-day);
+      const day = (x.getDay() + 6) % 7; // Monday = 0
+      x.setDate(x.getDate() - day);
       x.setHours(0,0,0,0);
       return x;
     }
-    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
-    function fmtRange(a,b){
-      const left  = a.toLocaleDateString('pt-BR', { day:'2-digit', month:'long' });
-      const right = b.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
-      return `${left} — ${right}`;
-    }
-    const tHHMM = s => new Date(s).toTimeString().slice(0,5);
-
-    // âncora: início da semana que estamos visualizando
     const urlStart = new URLSearchParams(location.search).get('start');
     let anchor = urlStart ? new Date(urlStart) : new Date();
     anchor = startOfWeek(anchor);
 
-    // ===== Modal helpers
-    function openModal(){
-      document.body.classList.add('modal-open');
-      modal.classList.add('is-open');
-      modal.setAttribute('aria-hidden','false');
-      setTimeout(()=>fDate.focus(),0);
-    }
-    function closeModal(){
-      modal.classList.remove('is-open');
-      modal.setAttribute('aria-hidden','true');
-      document.body.classList.remove('modal-open');
-      apptForm.reset();
-      editingId = null;
-      apptTitle.textContent = 'Nova Consulta';
-    }
-    modal.addEventListener('click', e => { if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
-    window.addEventListener('keydown', e => { if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
+    // time grid config
+    const startHour = 8;
+    const endHour = 18; // exclusive end
+    const slotMinutes = 30; // each row = 30min
+    const slotHeight = 40; // px per slot (matches CSS)
+    const slotsPerHour = 60 / slotMinutes;
+    const totalSlots = (endHour - startHour) * slotsPerHour;
 
-    async function loadPatients(){
-      const r = await fetch('/api/patients'); const arr = await r.json();
-      fPatient.innerHTML = arr.map(p=>`<option value="${p.id}">${p.full_name}</option>`).join('');
+    // helpers
+    const ymd = d => d.toISOString().slice(0,10);
+    const pad = n => String(n).padStart(2,'0');
+    function fmtRange(a,b){
+      const left  = a.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' });
+      const right = b.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+      return `${left} — ${right}`;
     }
-    async function loadInsurances(){
-      const r = await fetch('/api/insurances'); const arr = await r.json();
-      fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+    function tHHMM(s){
+      try{ return new Date(s).toTimeString().slice(0,5); } catch(e){ return s; }
     }
 
-    // ===== Render week
-    function renderWeek(data, weekStart){
-      // constrói 7 dias (seg..dom)
-      const days = Array.from({length:7}, (_,i)=>{
-        const d = addDays(weekStart, i);
-        return { key: ymd(d), label: d.toLocaleDateString('pt-BR',{ weekday:'short', day:'2-digit' }) };
+    // build the static grid: left times column + 7 day columns
+    function buildWeekGrid(weekStart){
+      const frag = [];
+      // left column (times)
+      frag.push(`<div class="time-column" aria-hidden="true">
+        <div class="day-head" style="height:40px;"></div>`); // empty header
+      for(let i=0;i<totalSlots;i++){
+        const minutes = startHour*60 + i*slotMinutes;
+        const h = Math.floor(minutes/60);
+        const m = minutes % 60;
+        const label = `${pad(h)}:${pad(m)}`;
+        frag.push(`<div class="time-slot">${label}</div>`);
+      }
+      frag.push(`</div>`);
+
+      // 7 day columns
+      for(let i=0;i<7;i++){
+        const d = new Date(weekStart); d.setDate(d.getDate()+i);
+        const label = d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit' });
+        frag.push(`<div class="day-col" data-date="${ymd(d)}">
+          <div class="day-head"><span>${label}</span><span></span></div>
+          <!-- slots area (empty) --></div>`);
+      }
+      grid.innerHTML = frag.join('');
+      // set grid height to fit slots (plus header)
+      grid.style.height = `${(totalSlots * slotHeight) + 40}px`;
+    }
+
+    // place appointments absolute inside the day-col
+    // appts: array with starts_at (ISO) and duration_minutes
+    function renderAppointments(appts){
+      // clear items first
+      document.querySelectorAll('.day-col').forEach(col=>{
+        // remove existing appt nodes
+        const existing = Array.from(col.querySelectorAll('.appt'));
+        existing.forEach(n=>n.remove());
       });
 
-      // agrupa por data YYYY-MM-DD (com base em starts_at)
+      // map by date
       const groups = {};
-      (data||[]).forEach(a=>{
-        const k = ymd(new Date(a.starts_at));
-        (groups[k] ||= []).push(a);
+      (appts||[]).forEach(a=>{
+        const dateKey = ymd(new Date(a.starts_at));
+        (groups[dateKey] ||= []).push(a);
       });
 
-      grid.innerHTML = days.map(d=>{
-        const items = (groups[d.key]||[])
-          .sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
-          .map(a=>{
-            const t = tHHMM(a.starts_at);
-            const ins = a.insurance_name || 'Particular';
-            return `<div class="item">
-                      <div class="who">${a.patient_name}</div>
-                      <div class="t">${t} • ${ins}</div>
-                    </div>`;
-          }).join('');
-        return `<div class="day-col">
-                  <h3><span>${d.label}</span><span></span></h3>
-                  ${items}
-                </div>`;
-      }).join('');
+      // render per day
+      Object.keys(groups).forEach(dateKey=>{
+        const col = grid.querySelector(`.day-col[data-date="${dateKey}"]`);
+        if (!col) return;
+        const items = groups[dateKey].sort((x,y)=> (x.starts_at || x.time || '').localeCompare(y.starts_at || y.time || ''));
+        items.forEach(a=>{
+          // compute top & height
+          const dt = new Date(a.starts_at);
+          const minutesFromStart = (dt.getHours()*60 + dt.getMinutes()) - (startHour*60);
+          if (minutesFromStart < 0) return; // out of range
+          const top = (minutesFromStart / slotMinutes) * slotHeight + 40; // + header
+          const duration = a.duration_minutes ? Number(a.duration_minutes) : 30;
+          const height = Math.max(28, (duration / slotMinutes) * slotHeight - 6); // minimum height
+          const ins = a.insurance_name || 'Particular';
+          const who = a.patient_name || '—';
+          const time = tHHMM(a.starts_at);
+          // create element
+          const div = document.createElement('div');
+          div.className = 'appt';
+          div.style.top = `${top}px`;
+          div.style.height = `${height}px`;
+          div.dataset.action = 'open-form';
+          div.dataset.id = a.id;
+          div.innerHTML = `<div class="who">${who}</div><div class="meta"><span>${time}</span><span>${ins}</span></div>`;
+          col.appendChild(div);
+        });
+      });
     }
 
-    // ===== Fetch + load week
+    const renderSidebarItem = (timeText, patientName, patientId) => `
+      <div class="sidebar-item" data-patient-id="${patientId}">
+        <div class="sidebar-t">${timeText}</div>
+        <div class="sidebar-who"><strong>${patientName}</strong></div>
+      </div>
+    `;
+
+    const emptyMessage = () =>
+  '<div style="color:#888;font-size:13px;">Nenhuma consulta agendada.</div>';
+
+    function renderWeeklySidebar(weekAppointments = []) {
+  asideEl.innerHTML = weekAppointments
+    .sort((a, b) =>
+      String(a.starts_at || a.time || '')
+        .localeCompare(String(b.starts_at || b.time || ''))
+    )
+    .map(appt =>
+      renderSidebarItem(
+        appt.starts_at
+          ? new Date(appt.starts_at).toTimeString().slice(0, 5)
+          : (appt.time || ''),
+        appt.patient_name,
+        appt.id
+      )
+    )
+    .join('') || emptyMessage();
+}
+  asideEl.addEventListener('click', e => {
+  const item = e.target.closest('.sidebar-item');
+  if (!item) return;
+
+  const apptId = item.getAttribute('data-appt-id');
+  if (apptId) openAppointmentForm(apptId);
+});
+
+    // fetch week from backend
     async function fetchWeek(startStr){
       const r = await fetch(`/api/appointments/week?start=${encodeURIComponent(startStr)}`);
+      if (!r.ok) return [];
       return r.json();
     }
+
+    // load week: build grid + appointments
     async function loadWeek(){
       const start = startOfWeek(anchor);
-      const end   = addDays(start, 6);
+      const end = new Date(start); end.setDate(end.getDate() + 6);
       weekLabel.textContent = fmtRange(start, end);
+      buildWeekGrid(start);
       const data = await fetchWeek(ymd(start));
-      renderWeek(data, start);
-      renderAsideList(data); 
+      renderAppointments(data);
+      renderWeeklySidebar(data);
     }
 
-    // ===== Navegação
-    prevWeek.addEventListener('click', ()=>{ anchor = addDays(anchor, -7); loadWeek(); });
-    nextWeek.addEventListener('click', ()=>{ anchor = addDays(anchor,  7); loadWeek(); });
-    window.addEventListener('keydown', (e)=>{
-      if (e.key === 'ArrowLeft')  prevWeek.click();
-      if (e.key === 'ArrowRight') nextWeek.click();
+    // navigation
+    prevWeek.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()-7); loadWeek(); });
+    nextWeek.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()+7); loadWeek(); });
+    todayWeek.addEventListener('click', ()=>{ anchor = startOfWeek(new Date()); loadWeek(); });
+    window.addEventListener('keydown', (e)=>{ if (e.key==='ArrowLeft') prevWeek.click(); if (e.key==='ArrowRight') nextWeek.click(); });
+
+    // ========== Modal / form logic (re-using day modal behaviour) ==========
+    function openModal(){ document.body.classList.add('modal-open'); modal.classList.add('is-open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>fPatientSearch.focus(),50); }
+    function closeModal(){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); document.body.classList.remove('modal-open'); apptForm.reset(); fPatientId.value=''; acList.style.display='none'; editingId=null; apptTitle.textContent='Nova Consulta'; }
+    modal.addEventListener('click', e=>{ if (e.target.matches('[data-close], .modal__backdrop')) closeModal(); });
+    window.addEventListener('keydown', e=>{ if (e.key==='Escape' && modal.classList.contains('is-open')) closeModal(); });
+
+    async function loadInsurances(){
+      try{
+        const r = await fetch('/api/insurances');
+        if (!r.ok) return;
+        const arr = await r.json();
+        fIns.innerHTML = `<option value="">— particular —</option>` + arr.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+      }catch(e){ console.warn('loadInsurances', e); }
+    }
+
+    // open modal to create new appointment on specified date/time
+    grid.addEventListener('dblclick', (ev)=>{
+      // dblclick fallback: determine day-col clicked and nearest slot time
+      const col = ev.target.closest('.day-col');
+      if (!col) return;
+      const rect = col.getBoundingClientRect();
+      const y = ev.clientY - rect.top - 40; // subtract header height
+      const slotIndex = Math.floor(y / slotHeight);
+      const minutes = startHour*60 + slotIndex * slotMinutes;
+      const hh = Math.floor(minutes/60), mm = minutes % 60;
+      fDate.value = col.dataset.date;
+      fTime.value = `${pad(hh)}:${pad(mm)}`;
+      editingId = null;
+      apptTitle.textContent = 'Nova Consulta';
+      loadInsurances().then(openModal);
     });
 
-    // ===== Nova consulta (abre modal já com uma data da semana âncora)
-    document.getElementById('openModalBtn').addEventListener('click', async ()=>{
-      await Promise.all([loadPatients(), loadInsurances()]);
-      fDate.value = ymd(anchor); // default: segunda da semana atual
-      const now = new Date(); now.setMinutes(Math.ceil(now.getMinutes()/30)*30,0,0);
-      fTime.value = now.toTimeString().slice(0,5);
+    // delegation: click on appt to open edit, click on empty area to create nearby
+    document.addEventListener('click', async (ev)=>{
+      const btnOpen = ev.target.closest('[data-action="open-form"]');
+      if (btnOpen){
+        const id = btnOpen.dataset.id;
+        openEdit(id);
+        return;
+      }
+      // click on empty day column header area to open new appointment on that day
+      const dayCol = ev.target.closest('.day-col');
+      if (dayCol && !ev.target.closest('.appt') && !ev.target.closest('.day-head')){
+        // compute clicked slot
+        const rect = dayCol.getBoundingClientRect();
+        const y = ev.clientY - rect.top - 40; // header
+        const slotIndex = Math.floor(y / slotHeight);
+        const minutes = startHour*60 + slotIndex * slotMinutes;
+        const hh = Math.floor(minutes/60), mm = minutes % 60;
+        fDate.value = dayCol.dataset.date;
+        fTime.value = `${pad(hh)}:${pad(mm)}`;
+        editingId = null;
+        apptTitle.textContent = 'Nova Consulta';
+        await loadInsurances();
+        openModal();
+        return;
+      }
+
+      const btnDelete = ev.target.closest('[data-action="delete"]');
+      if (btnDelete){
+        const id = btnDelete.getAttribute('data-id');
+        onDelete(id);
+        return;
+      }
+      const btnEdit = ev.target.closest('[data-action="edit"]');
+      if (btnEdit){
+        openEdit(btnEdit.dataset.id);
+        return;
+      }
+    });
+
+    // openEdit loads appointment into modal
+    async function openEdit(id){
+      const r = await fetch(`/api/appointments/${id}`);
+      if (!r.ok){ alert('Consulta não encontrada'); return; }
+      const a = await r.json();
+      await loadInsurances();
+      editingId = id;
+      apptTitle.textContent = 'Editar Consulta';
+      fDate.value = a.date || ymd(new Date(a.starts_at));
+      fTime.value = a.time || tHHMM(a.starts_at);
+      fPatientSearch.value = a.patient_name || '';
+      fPatientId.value = a.patient_id ? String(a.patient_id) : '';
+      fType.value = a.appointment_type || 'PRIMEIRA_VEZ';
+      fIns.value = a.insurance_id ? String(a.insurance_id) : '';
+      fValue.value = a.value_amount ?? '';
+      apptForm.elements.notes.value = a.notes || '';
       openModal();
-    });
+    }
 
-    // salvar (criar/editar)
+    // submit form (create / update)
     apptForm.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
       const fd = new FormData(apptForm);
       const payload = Object.fromEntries(fd.entries());
-      if (payload.value_amount === '') payload.value_amount = null;
+      try{
+        if (!payload.patient_id || payload.patient_id === ''){
+          const name = (payload.patient_search || fPatientSearch.value || '').trim();
+          if (!name){ alert('Informe o nome do paciente ou selecione um paciente.'); return; }
+          const p = await createPatientByName(name);
+          if (!p || !p.id){ alert('Erro ao criar paciente'); return; }
+          payload.patient_id = p.id;
+        }
+        if (payload.value_amount === '') payload.value_amount = null;
+        const body = {
+          patient_id: payload.patient_id,
+          date: payload.date,
+          time: payload.time,
+          appointment_type: payload.appointment_type,
+          insurance_id: payload.insurance_id || null,
+          notes: payload.notes || null,
+          value_amount: payload.value_amount || null
+        };
+        const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
+        const method = editingId ? 'PUT' : 'POST';
+        const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if (!r.ok){ const txt = await r.text(); alert('Erro ao salvar: ' + txt); return; }
+        closeModal();
+        loadWeek();
+      }catch(err){ console.error(err); alert('Erro ao salvar consulta'); }
+    });
 
-      const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
-      const method = editingId ? 'PUT' : 'POST';
+    // delete
+    async function onDelete(id){
+      if (!confirm('Excluir esta consulta?')) return;
+      const r = await fetch(`/api/appointments/${id}`, { method:'DELETE' });
+      if (!r.ok){ alert('Erro ao excluir'); return; }
+      loadWeek();
+    }
 
-      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-      if (!r.ok){ alert('Erro ao salvar'); return; }
-      closeModal();
-      loadWeek(); // recarrega a semana
+    // create patient by name
+    async function createPatientByName(name){
+      try{
+        const r = await fetch('/api/patients', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ full_name: name }) });
+        if (!r.ok){ const txt = await r.text(); console.warn('createPatient failed', txt); return null; }
+        return await r.json();
+      }catch(e){ console.error('createPatientByName', e); return null; }
+    }
+
+    // autocomplete (reuse from day)
+    let acTimer = null;
+    async function searchPatients(q){
+      if (!q) return [];
+      try{
+        const r = await fetch(`/api/patients?search=${encodeURIComponent(q)}`);
+        if (!r.ok) return [];
+        return await r.json();
+      }catch(e){ console.warn('searchPatients', e); return []; }
+    }
+    function renderAcList(items, query){
+      acList.innerHTML = '';
+      if (!items || items.length === 0){
+        const div = document.createElement('div');
+        div.className = 'ac-empty';
+        div.textContent = `Cadastrar "${query}"`;
+        div.addEventListener('click', async ()=>{ const p = await createPatientByName(query); if (p && p.id) selectPatient(p); else alert('Erro ao cadastrar paciente'); });
+        acList.appendChild(div);
+      } else {
+        items.forEach(p=>{
+          const div = document.createElement('div');
+          div.className = 'ac-item';
+          div.textContent = p.full_name;
+          div.dataset.id = p.id;
+          div.addEventListener('click', ()=> selectPatient(p));
+          acList.appendChild(div);
+        });
+      }
+      acList.style.display = 'block';
+    }
+    function selectPatient(p){ fPatientSearch.value = p.full_name; fPatientId.value = String(p.id); acList.style.display='none'; }
+
+    fPatientSearch.addEventListener('input', (e)=>{ const q = e.target.value.trim(); fPatientId.value=''; if (acTimer) clearTimeout(acTimer); acTimer = setTimeout(async ()=>{ if (!q){ acList.style.display='none'; return; } const res = await searchPatients(q); renderAcList(res, q); }, 300); });
+    document.addEventListener('click', (ev)=>{ if (!ev.target.closest('.autocomplete')) acList.style.display='none'; });
+
+    // load insurances on open new
+    openBtn.addEventListener('click', async ()=>{
+      await loadInsurances();
+      editingId = null;
+      apptTitle.textContent = 'Nova Consulta';
+      // default date: monday of anchor
+      const d = new Date(anchor);
+      fDate.value = ymd(d);
+      const now = new Date(); now.setMinutes(Math.ceil(now.getMinutes()/30)*30,0,0);
+      fTime.value = now.toTimeString().slice(0,5);
+      fPatientSearch.value = '';
+      fPatientId.value = '';
+      acList.style.display='none';
+      openModal();
     });
 
     // boot
-    loadWeek();
+    (async function init(){ await loadInsurances(); loadWeek(); })();
+
   </script>
 </body>
 </html>

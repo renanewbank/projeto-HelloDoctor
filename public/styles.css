@@ -79,7 +79,7 @@ body{
 }
 
 /* ====== Container ====== */
-.container{ width: 100%; margin: 50px 0; padding: 0 50px; }
+.container{ width: 100%; margin: 40px 0; padding: 0 40px; }
 .card{
   min-width: 900px;
   background: var(--surface);
@@ -90,7 +90,15 @@ body{
 }
 
 /* ====== Headings ====== */
-h2{ letter-spacing: -1px; font-size: 2em; }
+h2{ letter-spacing: -1px; font-size: 1em; font-weight: 600;}
+h2 span {
+  display: flex;
+  align-items: center;
+  color: var(--brand);
+  gap: 12px;
+  font-size: 2em;
+  font-weight: 700;
+}
 h3{ font-size: 1.1em; margin:5px; }
 .section-title{
   font-size:1.4em; font-weight:700; color:#0b3a67; display:flex; align-items:center; gap:8px;
@@ -131,7 +139,7 @@ tr:hover .btn-form-actions { display: block;}
 }
 .table th, .table td{ padding:6px 12px; border-bottom:1px solid var(--border); font-size:16px; font-weight: 500; }
 .table thead th{
-  background:#e6f0f9; color:#0b3a67; text-align:left; font-weight:800;
+  background:#e6f0f9; color:#0b3a67; text-align:left; font-weight:600; text-transform: uppercase;
 }
 .table tbody tr:hover{ background:#f9fbff; }
 
@@ -140,7 +148,7 @@ tr:hover .btn-form-actions { display: block;}
 }
 
 /* ====== Page header actions ====== */
-.header-actions{ display:flex; justify-content:space-between; align-items:center; margin: 10px 0 16px; gap:50px; }
+.header-actions{ display:flex; justify-content:space-between; align-items:center; gap:50px; }
 .primary-actions{ display:flex; justify-content: space-between; gap:8px; }
 
 /* Helpers */
@@ -284,7 +292,7 @@ body.modal-open{ overflow: hidden; }
 
 .segmented{ display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; }
 .segmented a{ padding:8px 14px; text-decoration:none; color:#6b7280; background:#fff; }
-.segmented a.active{ background:#0e80c9; color:#fff; font-weight:600; }
+.segmented a.active{ background:var(--primary); color:#fff; font-weight:600; }
 
 
 /*
@@ -406,7 +414,7 @@ body.modal-open{ overflow: hidden; }
  position: absolute;
  width: 90%;
  margin-left: 5%;
- background: #0d3b66;
+ background: var(--primary);
  color: #fff;
  border-radius: 5px;
  padding: 5px;
