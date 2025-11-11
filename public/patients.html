@@ -21,7 +21,7 @@
       <a href="#" class="disabled" style="opacity:.4; pointer-events:none;">Outros</a>
     </nav>
      <div class="topbar__right">
-        <span class="badge" id="todayBadge"></span>
+        <span class="badge float todayBadge"></span>
       <div style="width:28px;height:28px;border-radius:999px;background:#e2e8f0;"></div>
     </div>
   </header>
@@ -29,21 +29,22 @@
   <div class="container">
     <h2>Prontuários</h2>
 
-    <div>
+    <div class="search-bar">
       <h3>Pesquisar paciente</h3>
     <form id="searchForm" class="row" style="flex:1">
       <input style="flex:2" id="q" name="q" placeholder="Digite o nome, telefone ou CPF..." />
-      <button class="btn-secondary" type="submit">Buscar</button>
+      <button style="display: flex; align-items: center; gap: 8px;" type="submit"><img src="./images/Vector.png" alt=""> Buscar</button>
       <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
     </form>
     </div>
     
 
     <div class="card">
-      <div class="header-actions">
-        <div class="primary-actions">
-          <button id="openModalBtn" class="btn-primary">+ Cadastrar novo prontuário</button>
+      <div class="primary-actions">
+        <div id="patientCount" class="patient-count" aria-live="polite" style="color:var(--muted)">
+          0 resultados
         </div>
+        <button id="openModalBtn" class="btn-primary">+ Cadastrar novo prontuário</button>
       </div>
 
       <table class="table mt-12">
@@ -146,7 +147,7 @@
         </div>
         <div class="form-row">
           <label>Cidade</label>
-          <input name="address_" />
+          <input name="address_city" />
         </div>
         <div class="form-row">
           <label>Estado</label>
@@ -180,10 +181,14 @@
       </div>
 
       <div class="modal__footer">
-        <button type="submit" class="btn-primary" id="saveBtn">Salvar prontuário</button>
-        <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
-        <button type="button" class="btn-secondary" id="printBtn" style="margin-left:auto; display:none;">Imprimir</button>
-        <button type="button" class="btn-secondary danger" id="deleteBtn" style="display:none;">Excluir prontuário</button>
+        <div style="display: flex; gap: 8px; margin-left: -20px;">
+          <button type="submit" class="btn-primary" id="saveBtn">Salvar prontuário</button>
+          <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-secondary" id="printBtn">Imprimir</button>
+          <button type="button" class="btn-secondary danger" id="deleteBtn">Excluir prontuário</button>
+        </div>
       </div>
 
     </form>
@@ -266,9 +271,12 @@
 
   let editingId = null;
 
-  // Badge de data (placeholder)
-  const today = new Date();
-  todayBadge.textContent = today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  // Badge
+    const todayBadge = document.getElementsByClassName('todayBadge');
+    
+    Array.from(todayBadge).map(element => {
+      element.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    });
 
   function openPatModal(){
     document.body.classList.add('modal-open');
@@ -374,13 +382,33 @@
   }
 
   async function loadList(q=''){
-    const url = q ? `/api/patients?q=${encodeURIComponent(q)}` : '/api/patients';
-    const r = await fetch(url);
-    const data = await r.json();
+    // append a timestamp to avoid cached 304 responses and explicitly disable cache
+    const base = q ? `/api/patients?q=${encodeURIComponent(q)}` : '/api/patients';
+    const url = `${base}${base.includes('?') ? '&' : '?'}_=${Date.now()}`;
+
+    let r;
+    try {
+      r = await fetch(url, { cache: 'no-store' });
+    } catch (err) {
+      console.error('Network error', err);
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Erro de rede.</td></tr>`;
+      return;
+    }
+
+    if (!r.ok) {
+      console.warn('Unexpected response', r.status, r.statusText);
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum prontuário encontrado.</td></tr>`;
+      return;
+    }
+
+    const data = await r.json().catch(() => []);
     if (!Array.isArray(data) || data.length === 0){
       tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum prontuário encontrado.</td></tr>`;
       return;
     }
+    const pc = document.getElementById('patientCount');
+    if (pc) pc.textContent = `${data.length} resultados`;
+
     tbody.innerHTML = data.map(rowTpl).join('');
   }
 
@@ -432,27 +460,33 @@
   searchForm.addEventListener('submit', (ev)=>{ ev.preventDefault(); loadList(qInput.value.trim()); });
   clearBtn.addEventListener('click', ()=>{ qInput.value=''; loadList(''); });
 
-  // === toggle abre/fecha dos menus (kebab) ===
+  // === kebab popover: toggle open/close and close on Escape ===
   document.addEventListener('click', (e)=>{
-    if (!e.target.closest('.menu-wrap')) {
-      document.querySelectorAll('.menu-pop.is-open').forEach(el=>el.classList.remove('is-open'));
+    const btn = e.target.closest('[data-kebab]');
+    const anyPop = document.querySelectorAll('.kebab-pop');
+    if (btn){
+      const id = btn.getAttribute('data-kebab');
+      const pop = document.getElementById('kebab-'+id);
+      anyPop.forEach(p => { if (p!==pop) p.classList.remove('is-open'); });
+      pop.classList.toggle('is-open');
       return;
     }
-    const kb = e.target.closest('[data-kebab]');
-    if (kb){
-      const menu = kb.parentElement.querySelector('.menu-pop');
-      document.querySelectorAll('.menu-pop.is-open').forEach(el=>el!==menu && el.classList.remove('is-open'));
-      menu.classList.toggle('is-open');
-    }
+    if (!e.target.closest('.kebab-wrap')) anyPop.forEach(p=>p.classList.remove('is-open'));
   });
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.querySelectorAll('.menu-pop.is-open').forEach(el=>el.classList.remove('is-open')); });
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.querySelectorAll('.kebab-pop.is-open').forEach(el=>el.classList.remove('is-open')); });
 
   // === ações do menu (editar / imprimir / excluir) ===
-  document.addEventListener('click', async (e)=>{
-    const actBtn = e.target.closest('.menu-pop [data-action]');
-    if(!actBtn) return;
-    const id = actBtn.getAttribute('data-id');
-    const action = actBtn.getAttribute('data-action');
+  document.addEventListener('click', async (e)=> {
+    const item = e.target.closest('.kebab-item');
+    if (!item) return;
+    const action = item.getAttribute('data-action');
+    const id = item.getAttribute('data-id');
+
+    document.querySelectorAll('.kebab-pop.is-open').forEach(el=> el.classList.remove('is-open'));
+    if(action==='view'){
+      viewPatient(id);
+      return;
+    }
 
     if(action==='edit'){
       await loadInsurances();
@@ -469,6 +503,14 @@
       patTitle.textContent = `Editar prontuário #${p.id}`;
       document.getElementById('saveBtn').textContent='Salvar alterações';
       openPatModal();
+    }
+
+    if(action==='delete'){
+      if(!confirm('Excluir este prontuário?')) return;
+      const r = await fetch('/api/patients/'+id, { method:'DELETE' });
+      if(!r.ok){ const er = await r.json().catch(()=>({error:'Erro'})); alert(er.error||'Erro ao excluir'); return; }
+      loadList(qInput.value.trim());
+      return;
     }
 
     if(action==='print'){
@@ -491,32 +533,6 @@
       `);
       w.document.close();
     }
-
-    if(action==='delete'){
-      if(!confirm('Excluir este prontuário?')) return;
-      const r = await fetch('/api/patients/'+id, { method:'DELETE' });
-      if(!r.ok){ const er = await r.json().catch(()=>({error:'Erro'})); alert(er.error||'Erro ao excluir'); return; }
-      loadList(qInput.value.trim());
-    }
-
-    if(action==='view'){
-      viewPatient(id);
-      return;
-    }
-  });
-
-  // abre/fecha popover
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-kebab]');
-    const anyPop = document.querySelectorAll('.kebab-pop');
-    if (btn){
-      const id = btn.getAttribute('data-kebab');
-      const pop = document.getElementById('kebab-'+id);
-      anyPop.forEach(p => { if (p!==pop) p.classList.remove('open'); });
-      pop.classList.toggle('open');
-      return;
-    }
-    if (!e.target.closest('.kebab-wrap')) anyPop.forEach(p=>p.classList.remove('open'));
   });
 
   // clicar no nome abre o modal de visualização
@@ -526,49 +542,6 @@
     e.preventDefault();
     const id = a.getAttribute('data-id');
     viewPatient(id);
-  });
-
-
-  // ações do popover
-  document.addEventListener('click', async (e)=>{
-    const item = e.target.closest('.kebab-item');
-    if (!item) return;
-    const action = item.getAttribute('data-action');
-    const id = item.getAttribute('data-id');
-
-    if (action === 'edit'){
-      await loadInsurances();
-      const r = await fetch('/api/patients/'+id);
-      if (!r.ok){ alert('Paciente não encontrado'); return; }
-      const p = await r.json();
-
-      // preenche form
-      for (const [k,v] of Object.entries(p)){
-        if (patientForm.elements[k] !== undefined){
-          if (k==='birth_date' && v) patientForm.elements[k].value = String(v).slice(0,10);
-          else patientForm.elements[k].value = v ?? '';
-        }
-      }
-
-      editingId = id;
-      patTitle.textContent = `Editar prontuário #${p.id}`;
-      document.getElementById('saveBtn').textContent='Salvar alterações';
-      // mostra botões extras em modo edição
-      document.getElementById('deleteBtn').style.display = 'inline-block';
-      document.getElementById('printBtn').style.display  = 'inline-block';
-      openPatModal();
-    }
-
-    if (action === 'delete'){
-      if (!confirm('Excluir este prontuário?')) return;
-      const r = await fetch('/api/patients/'+id, { method:'DELETE' });
-      if (!r.ok){ alert('Falha ao excluir'); return; }
-      loadList(qInput.value.trim());
-    }
-
-    if (action === 'print'){
-      printPatient(id);
-    }
   });
 
   // botões dentro do modal grande (modo edição)

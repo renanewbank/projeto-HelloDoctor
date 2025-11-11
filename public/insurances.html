@@ -30,17 +30,9 @@
 
     <div class="card">
       <div class="header-actions">
-        <form id="searchForm" class="row" style="flex:1">
-          <input class="w-260" id="q" name="q" placeholder="Digite nome, código ANS, telefone ou e-mail......" />
-          <button class="btn-secondary" type="submit">Buscar</button>
-          <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
-        </form>
-
-        <div class="primary-actions">
-          <button id="openModalBtn" class="btn-primary">
-            + Novo Convênio
-          </button>
-        </div>
+        <button id="openModalBtn" class="btn-primary">
+          + Cadastrar Novo Convênio
+        </button>
       </div>
 
       <table class="table mt-12" id="listTable">
@@ -107,7 +99,7 @@
             </div>
         </div>
 
-        <div class="modal__footer">
+        <div style="margin-left: -18px;" class="modal__footer">
             <button type="submit" class="btn-primary">Salvar convênio</button>
             <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
         </div>
@@ -124,11 +116,6 @@
   const modal        = document.getElementById('insModal');
   const modalTitle   = document.getElementById('modalTitle');
   const createForm   = document.getElementById('createForm');
-
-  // busca (igual ao padrão de Prontuários)
-  const searchForm = document.getElementById('searchForm');
-  const qInput     = document.getElementById('q');
-  const clearBtn   = document.getElementById('clearBtn');
 
   // estado
   let editingId = null;
@@ -230,7 +217,7 @@
       return;
     }
     closeModal();
-    loadList(qInput.value.trim());
+    loadList();
   });
 
   // ===== kebab: abrir/fechar =====
@@ -240,11 +227,11 @@
     if (btn){
       const id  = btn.getAttribute('data-kebab');
       const pop = document.getElementById('kebab-'+id);
-      all.forEach(p => { if (p!==pop) p.classList.remove('open'); });
-      pop.classList.toggle('open');
+      all.forEach(p => { if (p!==pop) p.classList.remove('is-open'); });
+      pop.classList.toggle('is-open');
       return;
     }
-    if (!e.target.closest('.kebab-wrap')) all.forEach(p=>p.classList.remove('open'));
+    if (!e.target.closest('.kebab-wrap')) all.forEach(p=>p.classList.remove('is-open'));
   });
 
   // ===== ações do kebab (editar/excluir) =====
@@ -281,18 +268,8 @@
       if (!confirm('Excluir este convênio?')) return;
       const r = await fetch('/api/insurances/'+id, { method:'DELETE' });
       if (!r.ok){ alert('Falha ao excluir'); return; }
-      loadList(qInput.value.trim());
+      loadList();
     }
-  });
-
-  // ===== busca (igual prontoários) =====
-  searchForm.addEventListener('submit', (ev)=>{
-    ev.preventDefault();
-    loadList(qInput.value.trim());
-  });
-  clearBtn.addEventListener('click', ()=>{
-    qInput.value = '';
-    loadList('');
   });
 
   // boot
