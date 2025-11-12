@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>HelloDoctor — Prontuários</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="shortcut icon" href="./images/ClipboardCheck.png" type="image/x-icon">
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -32,9 +33,9 @@
     <div class="search-bar" style="padding-top: 16px;">
       <h3>Pesquisar paciente</h3>
     <form id="searchForm" class="row" style="flex:1">
-      <input style="flex:2" id="q" name="q" placeholder="Digite o nome, telefone ou CPF..." />
-      <button style="display: flex; align-items: center; gap: 8px;" type="submit"><img src="./images/Vector.png" alt=""> Buscar</button>
-      <button class="btn-ghost" type="button" id="clearBtn">Limpar</button>
+      <input style="flex:2; padding: 4px 14px;" id="q" name="q" placeholder="Digite o nome, telefone ou CPF..." />
+      <button class="btn-primary btn-icon" type="submit"><img src="./images/Vector.png" alt="Buscar"> Buscar</button>
+      <button class="btn-secondary" type="button" id="clearBtn">Limpar</button>
     </form>
     </div>
     
@@ -44,7 +45,7 @@
         <div id="patientCount" class="patient-count" aria-live="polite" style="color:var(--muted)">
           0 resultados
         </div>
-        <button id="openModalBtn" class="btn-primary">+ Cadastrar novo prontuário</button>
+        <button id="openModalBtn" class="btn-primary btn-icon"><img src="./images/AddVector.png" alt="Cadastrar novo prontuário">Cadastrar novo prontuário</button>
       </div>
 
       <table class="table mt-12">
@@ -64,7 +65,7 @@
     </div>
   </div>
 
-  <!-- MODAL: Prontuário (criar/editar) -->
+<!-- MODAL: Prontuário (criar/editar) -->
 <div class="modal" id="patModal" aria-hidden="true">
   <div class="modal__backdrop" data-close></div>
   <div class="modal__dialog" role="dialog" aria-modal="true">
@@ -72,6 +73,7 @@
       <h2 id="patModalTitle">Novo Prontuário</h2>
       <button class="modal__close" aria-label="Fechar" data-close>&times;</button>
     </div>
+
     <form id="patientForm" class="modal__body" autocomplete="off">
       <div class="section-title">Dados Pessoais</div>
       <div class="form-grid">
@@ -79,10 +81,12 @@
           <label>Nome completo</label>
           <input name="full_name" required />
         </div>
+
         <div class="form-row">
           <label>Nome social</label>
           <input name="social_name" />
         </div>
+
         <div class="form-row">
           <label>Gênero</label>
           <select name="gender">
@@ -91,32 +95,39 @@
             <option value="other">Outros</option>
           </select>
         </div>
+
         <div class="form-row">
           <label>Data de nascimento</label>
           <input type="date" name="birth_date" />
         </div>
+
         <div class="form-row">
           <label>Profissão</label>
           <input name="profession" />
         </div>
+
         <div class="form-row">
           <label>Estado civil</label>
           <input name="marital_status" />
         </div>
+
         <div class="form-row">
           <label>Nacionalidade</label>
           <input name="nationality" />
         </div>
+
         <div class="form-row">
           <label>CPF</label>
           <input name="cpf" placeholder="000.000.000-00" />
         </div>
+
         <div class="form-row">
           <label>Convênio</label>
           <select name="insurance_id" id="insSelect">
             <option value="">— sem convênio —</option>
           </select>
         </div>
+
         <div class="form-row">
           <label>Nº da carteirinha</label>
           <input name="insurance_card" />
@@ -180,15 +191,22 @@
         <textarea name="notes" rows="4" placeholder="Anotações internas"></textarea>
       </div>
 
-      <div class="modal__footer">
-        <div style="display: flex; gap: 8px; margin-left: -20px;">
-          <button type="submit" class="btn-primary" id="saveBtn">Salvar prontuário</button>
-          <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn-secondary" id="printBtn">Imprimir</button>
-          <button type="button" class="btn-secondary danger" id="deleteBtn">Excluir prontuário</button>
-        </div>
+      <div style="margin-left: -18px;" class="modal__footer flex-start">
+        <button type="submit" class="btn-primary btn-icon"id="saveBtn" >
+          <img src="./images/SaveVector.png" alt="Salvar prontuário">Salvar prontuário
+        </button>
+
+        <button type="button" class="btn-danger btn-icon" id="deleteBtn">
+          <img src="./images/DeleteVector.png" alt="Excluir prontuário">Excluir prontuário
+        </button>
+
+        <button type="button" class="btn-secondary btn-icon" id="printBtn">
+          <img src="./images/PrintVector.png" alt=""> Imprimir
+        </button>
+
+        <button type="button" class="btn-secondary btn-icon" data-close>
+          <img src="./images/ExitVector.png" alt="Sair sem salvar">Sair sem salvar
+        </button>
       </div>
 
     </form>
@@ -220,7 +238,7 @@
       <div id="pv-notes" style="white-space:pre-wrap; border:1px solid var(--border); border-radius:8px; padding:10px;"></div>
     </div>
     <div class="modal__footer">
-      <button type="button" class="btn-secondary" data-close>Fechar</button>
+      <button type="button" class="btn-secondary btn-icon" data-close><img src="./images/ExitVector.png" alt="Fechar">Fechar</button>
     </div>
   </div>
 </div>
@@ -288,8 +306,6 @@
     patModal.classList.remove('is-open');
     patModal.setAttribute('aria-hidden','true');
     patientForm.reset(); editingId=null; 
-    patTitle.textContent='Novo prontuário';
-    document.getElementById('saveBtn').textContent='Salvar prontuário';
     document.getElementById('deleteBtn').style.display='none';
     document.getElementById('printBtn').style.display='none';
     document.body.classList.remove('modal-open');
@@ -301,7 +317,6 @@
     await loadInsurances();
     editingId = null;
     patTitle.textContent = 'Novo Prontuário';
-    document.getElementById('saveBtn').textContent = 'Salvar prontuário';
     openPatModal();
   });
 
@@ -501,7 +516,7 @@
       }
       editingId = id;
       patTitle.textContent = `Editar prontuário #${p.id}`;
-      document.getElementById('saveBtn').textContent='Salvar alterações';
+      document.getElementById('saveBtn').innerHTML='<img src="./images/SaveVector.png" alt="Salvar alterações"> Salvar alterações';
       openPatModal();
     }
 

@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>HelloDoctor — Agenda (Dia)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="shortcut icon" href="./images/ClipboardCheck.png" type="image/x-icon">
   <link rel="stylesheet" href="/styles.css" />
   <style>
     /* Mantive seu CSS original e adicionei só o necessário para autocomplete */
@@ -61,11 +62,11 @@
     </aside>
 
     <div class="container">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 50px; margin-bottom:24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; margin-bottom:24px;">
         <h2>Agenda da
           <span>Dra. Maria Ligia Pereira <img style="cursor: pointer;" src="./images/ChevronDownVector.png" alt=""></span>
         </h2>
-        <button id="openModalBtn" class="btn-primary">+ Nova Consulta</button>
+        <button id="openModalBtn" class="btn-primary btn-icon"><img src="./images/AddVector.png" alt=""> Nova Consulta</button>
       </div>
       
       <div class="card">
@@ -121,7 +122,7 @@
               </div>
               <div class="form-row">
                 <label>Hora</label>
-                <input type="time" name="time" id="f_time" required />
+                <input type="time" name="time" min="08:00" max="18:00" id="f_time" required />
               </div>
               
               <div class="form-row col-span-2 autocomplete" style="grid-column: span 3; position:relative;">
@@ -148,20 +149,43 @@
               </div>
             </div>
             <div class="modal__footer">
-              <button style="margin-left:-18px;" class="btn-primary" type="submit" id="saveBtn">Salvar</button>
-              <button class="btn-secondary" type="button" data-close>Cancelar</button>
-            </div>
+              <button style="margin-left:-18px;" class="btn-primary btn-icon" type="submit" id="saveBtn"><img src="./images/SaveVector.png" alt="Salvar">Salvar</button>
+              <button class="btn-secondary btn-icon" type="button" data-close><img src="./images/ExitVector.png" alt="Cancelar">Cancelar</button>
+          </div>
           </form>
         </div>
     </div>
 
-    <!-- DROPDOWN TEMPLATE (reutilizado em cada linha) -->
-    <div id="rowDropdownTpl" class="dropdown" role="menu" aria-hidden="true">
-      <button type="button" data-action="edit">Editar</button>
-      <button type="button" data-action="delete" style="color:#b91c1c">Excluir</button>
-    </div>
-  </div>
+  <!-- Modal de VISUALIZAÇÃO -->
+    <div class="modal" id="viewModal" aria-hidden="true">
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true">
+        <div class="modal__header">
+          <h2 id="viewTitle">Consulta</h2>
+        </div>
 
+        <div class="modal__body mt-12">
+          <div id="viewContent" class="form-grid" style="font-size:14px; line-height:1.5;"></div>
+        </div>
+
+        <div class="modal__footer">
+          <button id="viewEditBtn" class="btn-primary btn-icon">
+            <img src="./images/EditWhiteVector.png" alt="Editar">
+            Editar consulta
+          </button>
+
+          <button id="viewDeleteBtn" class="btn-danger btn-icon">
+            <img src="./images/DeleteVector.png" alt="Excluir">
+            Excluir
+          </button>
+
+          <button class="btn-secondary btn-icon" data-close>
+            <img src="./images/ExitVector.png" alt="Sair sem salvar">
+            Sair sem salvar
+          </button>
+        </div>
+      </div>
+    </div>
   <script>
   // Badge
     const todayBadge = document.getElementsByClassName('todayBadge');
@@ -189,6 +213,11 @@
     const fPatientSearch = document.getElementById('f_patient_search');
     const fPatientId = document.getElementById('f_patient_id');
     const acList = document.getElementById('acList');
+
+    const viewModal = document.getElementById("viewModal");
+    const viewContent = document.getElementById("viewContent");
+    const viewEditBtn = document.getElementById("viewEditBtn");
+    const viewDeleteBtn = document.getElementById("viewDeleteBtn");
 
     // state
     let editingId = null;
@@ -254,7 +283,7 @@
     }
 
     const renderSidebarItem = (timeText, patientName, patientId) => `
-      <div class="sidebar-item" data-patient-id="${patientId}">
+      <div class="sidebar-item" data-appt-id="${patientId}">
         <div class="sidebar-t">${timeText}</div>
         <div class="sidebar-who"><strong>${patientName}</strong></div>
       </div>
@@ -286,13 +315,24 @@
   };
 
 
-asideEl.addEventListener('click', e => {
+asideEl.addEventListener('click', async e => {
   const item = e.target.closest('.sidebar-item');
   if (!item) return;
 
   const apptId = item.getAttribute('data-appt-id');
-  if (apptId) openAppointmentForm(apptId);
+  if (!apptId) return;
+
+  try {
+    const r = await fetch(`/api/appointments/${apptId}`);
+    if (!r.ok) throw new Error('Erro ao buscar agendamento');
+    const appt = await r.json();
+    showViewer(appt);
+  } catch (err) {
+    console.error(err);
+    alert('Não foi possível abrir o agendamento.');
+  }
 });
+
 
     async function refreshDay(){
       dayLabel.textContent = fmtLong(currentDay);
@@ -366,12 +406,19 @@ asideEl.addEventListener('click', e => {
         return;
       }
       const btnOpenForm = ev.target.closest('[data-action="open-form"]');
-      if (btnOpenForm){
-        const id = btnOpenForm.getAttribute('data-id');
-        openEdit(id);
-        return;
-      }
-
+        if (btnOpenForm) {
+          const id = btnOpenForm.getAttribute('data-id');
+          try {
+            const r = await fetch(`/api/appointments/${id}`);
+            if (!r.ok) throw new Error('Erro ao buscar agendamento');
+            const appt = await r.json();
+            showViewer(appt);
+          } catch (err) {
+            console.error(err);
+            alert('Não foi possível abrir o agendamento.');
+          }
+          return;
+}
       const btnDelete = ev.target.closest('[data-action="delete"]');
       if (btnDelete){
         const id = btnDelete.getAttribute('data-id');
@@ -562,6 +609,66 @@ asideEl.addEventListener('click', e => {
       if (e.key === 'ArrowLeft') prevDay.click();
       if (e.key === 'ArrowRight') nextDay.click();
     });
+
+    function showViewer(appt){
+      selectedAppt = appt;
+      const d = new Date(appt.starts_at);
+      const time = d.toTimeString().slice(0,5);
+
+      viewContent.innerHTML = `
+        <div class="form-row">
+          <label>Tipo de compromisso</label>
+          ${appt.appointment_type}
+        </div>
+        <div class="form-row">
+          <label>Data</label>
+          ${d.toLocaleDateString()}
+        </div>
+        <div class="form-row">
+          <label>Hora</label>
+          ${time}
+        </div>
+
+        <div class="form-row col-span-2 autocomplete" style="grid-column: span 3; position:relative;">
+          <label>Paciente</label>
+          ${appt.patient_name}
+        </div>
+
+        <div class="form-row col-span-2" style="grid-column: span 2; position:relative;">
+          <label>Convênio</label>
+          ${appt.insurance_name || 'Particular'}
+        </div>
+
+        <div class="form-row">
+          <label>Valor (R$)</label>
+          R$ ${appt.value_amount ?? '—'}
+        </div>
+        <div class="form-row col-span-3" style="grid-column: span 3;">
+          <label>Observações</label>
+          ${appt.notes || '—'}
+        </div>
+      `;
+      document.body.classList.add('modal-open');
+      viewModal.classList.add('is-open');
+      viewModal.setAttribute('aria-hidden','false');
+
+      // Botões internos
+      document.getElementById('viewEditBtn').addEventListener('click', () => {
+        hideViewer();
+        openEdit(appt.id);
+      });
+
+      document.getElementById('viewDeleteBtn').addEventListener('click', () => {
+        hideViewer();
+        onDelete(appt.id);
+      });
+    }
+    function hideViewer(){
+      viewModal.classList.remove('is-open');
+      viewModal.setAttribute('aria-hidden','true');
+      document.body.classList.remove('modal-open');
+      selectedAppt = null;
+    }
 
     // boot
     (async function init(){

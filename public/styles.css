@@ -12,6 +12,8 @@
   --brand-600: rgba(29, 90, 146, 0.804);
   --primary: #0084B8;        /* botões principais */
   --primary-700:#0574a0;
+  --gray: #505050;
+  --gray-600: #3c3c3c8e;
   --accent: #16a34a;         /* estados ok */
   --warn: #f59e0b;
 
@@ -111,7 +113,7 @@ h3{ font-size: 1.1em; margin:5px; }
 /* ====== Inputs / Buttons ====== */
 .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
-input, select, button, textarea{
+input, select, textarea{
   border:1px solid var(--border);
   background:#fff;
   padding:10px 12px;
@@ -122,11 +124,38 @@ input, select, button, textarea{
 input:focus, select:focus, textarea:focus{ border-color:#93c5fd; box-shadow:0 0 0 3px #dbeafe; }
 
 button{
-  border:none; color:#fff; background: var(--primary);
-  cursor:pointer; font-weight:700;
+  padding: 4px 14px;
+  border:none; 
+  cursor:pointer; 
+  font-weight:500;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  border-radius:4px; 
 }
-button:hover{ background: var(--primary-700); }
-.btn-secondary{ background:#e5e7eb; color:#111827; }
+.btn-primary{ 
+  background: var(--primary); 
+  color:var(--surface); 
+  border:none; 
+}
+.btn-primary:hover{ background: var(--primary-700); }
+
+.btn-secondary{ 
+  background:#eef2f7; 
+  color:var(--gray); 
+  border:2px solid var(--gray);
+}
+.btn-secondary:hover{ opacity: 75%; }
+
+.btn-danger{ 
+  background:#B80000; 
+  color:var(--surface); 
+}
+.btn-danger:hover{ background:#9c0000; }
+.btn-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .btn-form-actions { display: none; background: var(--primary); color: var(--surface); font-weight: 600; font-size:14px; padding: 1px 10px; border-radius: 5px; border: 1px solid var(--border); cursor: pointer; float: right; }
 tr:hover .btn-form-actions { display: block;}
 
@@ -158,12 +187,6 @@ tr:hover .btn-form-actions { display: block;}
 .w-260{ width:260px }
 .w-140{ width:140px }
 
-/* ===== Buttons refinados ===== */
-.btn-primary{ background: var(--primary); color:var(--surface); font-weight:700; padding:10px 14px; border-radius:5px; border:none; cursor:pointer; }
-.btn-primary:hover{ background: var(--primary-700); }
-.btn-secondary{ background:#eef2f7; color:#0b3a67; font-weight:700; padding:10px 14px; border-radius:5px; border:1px solid var(--border); cursor:pointer; }
-.btn-secondary:hover{ background:#e6edf6; }
-
 /* ===== Modal ===== */
 .modal{ position: fixed; inset:0; display:none; }
 .modal.is-open{ display:block; }
@@ -185,7 +208,6 @@ tr:hover .btn-form-actions { display: block;}
 }
 .modal__body{ padding: 0px 20px 120px; }
 .modal__body .section-title{ margin:16px 0; }
-.modal__footer{ display:flex; justify-content:space-between; }
 .form-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
 .form-row{ display:flex; flex-direction:column; gap:6px; }
 .form-row label{  color:#0b3a67; font-weight:700; }
@@ -218,6 +240,8 @@ tr:hover .btn-form-actions { display: block;}
 }
 
 .modal__footer{
+  display:flex; 
+  gap: 10px;
   position: absolute;
   width: calc(100% - 20px);
   bottom: 0;
@@ -225,6 +249,9 @@ tr:hover .btn-form-actions { display: block;}
   z-index: 2;
   border-top: 1px solid var(--border);
   padding: 18px;
+}
+.modal__footer.flex-start{
+  justify-content:flex-start;
 }
 
 /* evita rolagem do fundo quando o modal estiver aberto */
@@ -291,7 +318,7 @@ body.modal-open{ overflow: hidden; }
 }
 
 .segmented{ display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; }
-.segmented a{ padding:8px 14px; text-decoration:none; color:#6b7280; background:#fff; }
+.segmented a{ padding:4px 14px; text-decoration:none; color:#6b7280; background:#fff; }
 .segmented a.active{ background:var(--primary); color:#fff; font-weight:600; }
 
 
@@ -316,8 +343,8 @@ body.modal-open{ overflow: hidden; }
  margin-top: 30px;
 }
 .sidebar-item { padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:#fff; }
-.sidebar-t { font-size:12px; color:var(--muted); }
-.sidebar-who { font-weight:700; }
+.sidebar-t { font-size:14px; color:var(--muted); }
+.sidebar-who { font-weight:500; color: var(--brand); }
 
 .container-agenda{
  flex-grow: 1;
@@ -340,12 +367,6 @@ body.modal-open{ overflow: hidden; }
  font-size: 18px;
  font-weight: 700;
  color: var(--brand);
-}
-.action-group .btn-secondary,
-.action-group .btn-primary{
- padding: 6px 10px;
- font-size: 13px;
- border-radius: 6px;
 }
 
 /* Tabela Agenda */

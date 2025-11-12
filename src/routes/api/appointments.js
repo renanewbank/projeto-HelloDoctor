@@ -64,6 +64,9 @@ router.post('/', async (req, res) => {
   if (!b.date || !b.time)   return res.status(400).json({ error: 'date and time are required' });
   if (!b.appointment_type)  return res.status(400).json({ error: 'appointment_type is required' });
 
+   if (typeof b.value_amount === 'string') {
+      b.value_amount = b.value_amount.replace(',', '.');
+    }
   const starts_at = toStartsAt(b.date, b.time);
 
   const r = await pool.query(

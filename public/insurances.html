@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>HelloDoctor — Convênios</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="shortcut icon" href="./images/ClipboardCheck.png" type="image/x-icon">
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -29,9 +30,10 @@
     <h2>Convênios</h2>
 
     <div class="card">
-      <div class="header-actions">
-        <button id="openModalBtn" class="btn-primary">
-          + Cadastrar Novo Convênio
+      <div class="header-actions" style="justify-content: flex-end;">
+        <button id="openModalBtn" class="btn-primary btn-icon">
+          <img src="./images/AddVector.png" alt="Cadastrar Novo Convênio">
+          Cadastrar Novo Convênio
         </button>
       </div>
 
@@ -99,9 +101,9 @@
             </div>
         </div>
 
-        <div style="margin-left: -18px;" class="modal__footer">
-            <button type="submit" class="btn-primary">Salvar convênio</button>
-            <button type="button" class="btn-secondary" data-close>Sair sem salvar</button>
+        <div style="margin-left: -18px;" class="modal__footer flex-start">
+            <button type="submit" class="btn-icon btn-primary"><img src="./images/SaveVector.png" alt="Salvar convênio"> Salvar convênio</button>
+            <button type="button" class="btn-icon btn-secondary" data-close><img src="./images/ExitVector.png" alt="Sair sem salvar"> Sair sem salvar</button>
         </div>
         </form>
 
