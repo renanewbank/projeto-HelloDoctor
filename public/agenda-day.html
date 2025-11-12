@@ -62,19 +62,22 @@
     </aside>
 
     <div class="container">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; margin-bottom:24px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; margin-bottom:24px;">
         <h2>Agenda da
           <span>Dra. Maria Ligia Pereira <img style="cursor: pointer;" src="./images/ChevronDownVector.png" alt=""></span>
         </h2>
-        <button id="openModalBtn" class="btn-primary btn-icon"><img src="./images/AddVector.png" alt=""> Nova Consulta</button>
+        <button id="openModalBtn" class="btn-primary btn-icon"><img src="./images/AddVector.png" alt="Nova Consulta"> Nova Consulta</button>
       </div>
       
       <div class="card">
         <div class="header-actions">
-          <div class="pager__label">
-            <button id="prevDay" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Dia anterior"><</button>
-            <span id="dayLabel" class="">—</span>
-            <button id="nextDay" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próximo dia">></button>
+          <div style="display: flex; gap:12px; margin-left: -12px;">
+            <button id="todayDay" class="btn-secondary" style="margin-left:12px; border: 2px solid var(--border);">Hoje</button>
+            <div class="pager__label">
+              <button id="prevDay" class="pager__btn" style="margin-right: 10px; border-radius: 50px 0px 0px 50px;" title="Dia anterior"><</button>
+              <span id="dayLabel" class="">—</span>
+              <button id="nextDay" class="pager__btn" style="margin-left: 10px; border-radius: 0px 50px 50px 0px;" title="Próximo dia">></button>
+            </div>
           </div>
           <div class="segmented">
             <a href="/agenda-day.html" class="active">DIA</a>
@@ -197,6 +200,7 @@
     const dayLabel = document.getElementById('dayLabel');
     const prevDay = document.getElementById('prevDay');
     const nextDay = document.getElementById('nextDay');
+    const todayDay = document.getElementById('todayDay');
     const tbody = document.getElementById('dayTbody');
     const asideEl = document.getElementById('asideList');
 
@@ -293,7 +297,6 @@
   '<div style="color:#888;font-size:13px;">Nenhuma consulta agendada.</div>';
 
   function renderDailySidebar(data = []) {
-  console.log("Render daily:", data);
 
   if (!Array.isArray(data)) data = Object.values(data);
 
@@ -605,6 +608,7 @@ asideEl.addEventListener('click', async e => {
     // navigation
     prevDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()-1); refreshDay(); });
     nextDay.addEventListener('click', ()=>{ currentDay.setDate(currentDay.getDate()+1); refreshDay(); });
+    todayDay.addEventListener('click', ()=>{ currentDay = new Date(); currentDay.setHours(0, 0, 0, 0); refreshDay(); });
     window.addEventListener('keydown', e=>{
       if (e.key === 'ArrowLeft') prevDay.click();
       if (e.key === 'ArrowRight') nextDay.click();
